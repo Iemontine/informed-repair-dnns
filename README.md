@@ -85,8 +85,9 @@ Verify IsaacLab installation by running:
 
 XRL conventions hope to measure the following features:
 
-| Faithfulness | Do the measured causal influences make intuitive sense? e.g. the presence of a stop sign should lead to deceleration. |
+| Feature | Description |
 | :---: | :---- |
-| **Completeness** | Does the causal model consider all road features and sensor data? |
-| **Comprehensibility** | Does the output of the model make intuitive and meaningful sense to humans? |
-| **Robustness** | Compare learned DAGs before and after minor perturbations to the agent and environment; was the graph structure stable? |
+| Faithfulness | Do the measured causal influences make intuitive sense? e.g. the presence of a stop sign should lead to deceleration. |
+| Completeness | Does the causal model consider all road features and sensor data? |
+| Comprehensibility | Does the output of the model make intuitive and meaningful sense to humans? |
+| Robustness | Compare learned DAGs before and after minor perturbations to the agent and environment; was the graph structure stable? |
