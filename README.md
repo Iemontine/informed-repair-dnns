@@ -1,7 +1,8 @@
 # Causal Policy Explanation for Autonomous Driving in IsaacSim
 
 Install IsaacSim and IsaacLab from [here](https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/pip_installation.html)
-NOTE: Prefer using .venv for the installation.
+
+``NOTE: Prefer using .venv for the installation.``
 
 Verify IsaacSim installation by running:
 
@@ -12,7 +13,7 @@ isaacsim
 Verify IsaacLab installation by running:
 
 ```bash
-./isaaclab.sh -p scripts/tutorials/00_sim/create_empty.py
+./IsaacLab/isaaclab.bat -p scripts/tutorials/00_sim/create_empty.py
 ```
 
 ## Environment Info
