@@ -1,0 +1,68 @@
+
+@inproceedings{nawas_provable_2024,
+  location  = {Cham},
+  title     = {Provable Repair of Vision Transformers},
+  isbn      = {978-3-031-65112-0},
+  doi       = {10.1007/978-3-031-65112-0_8},
+  abstract  = {Vision Transformers have emerged as state-of-the-art image recognition tools, but may still exhibit incorrect behavior. Incorrect image recognition can have disastrous consequences in safety-critical real-world applications such as self-driving automobiles. In this paper, we present Provable Repair of Vision Transformers ({PRoViT}), a provable repair approach that guarantees the correct classification of images in a repair set for a given Vision Transformer without modifying its architecture. {PRoViT} avoids negatively affecting correctly classified images (drawdown) by minimizing the changes made to the Vision Transformer’s parameters and original output. We observe that for Vision Transformers, unlike for other architectures such as {ResNet} or {VGG}, editing just the parameters in the last layer achieves correctness guarantees and very low drawdown. We introduce a novel method for editing these last-layer parameters that enables {PRoViT} to efficiently repair state-of-the-art Vision Transformers for thousands of images, far exceeding the capabilities of prior provable repair approaches.},
+  pages     = {156--178},
+  booktitle = {{AI} Verification},
+  publisher = {Springer Nature Switzerland},
+  author    = {Nawas, Stephanie and Tao, Zhe and Thakur, Aditya V.},
+  editor    = {Avni, Guy and Giacobbe, Mirco and Johnson, Taylor T. and Katz, Guy and Lukina, Anna and Narodytska, Nina and Schilling, Christian},
+  date      = {2024},
+  year      = {2024},
+  langid    = {english}
+}
+
+@article{tao_architecture-preserving_2023,
+  title        = {Architecture-Preserving Provable Repair of Deep Neural Networks},
+  volume       = {7},
+  url          = {https://dl.acm.org/doi/10.1145/3591238},
+  doi          = {10.1145/3591238},
+  abstract     = {Deep neural networks ({DNNs}) are becoming increasingly important components  
+                  of software, and are considered the state-of-the-art solution for a number  
+                  of problems, such as image recognition. However, {DNNs} are far from  
+                  infallible, and incorrect behavior of {DNNs} can have disastrous real-world  
+                  consequences. This paper addresses the problem of architecture-preserving  
+                  V-polytope provable repair of {DNNs}.  
+                  A V-polytope defines a convex bounded polytope using its vertex representation.  
+                  V-polytope provable repair guarantees that the repaired {DNN}  
+                  satisfies the given specification on the infinite set of points in the given V-polytope.  
+                  An architecture-preserving repair only modifies the parameters of the {DNN}, without  
+                  modifying its architecture. The repair has the flexibility to  
+                  modify multiple layers of the {DNN}, and runs in polynomial time.  
+                  It supports {DNNs} with activation functions that have some linear pieces,  
+                  as well as fully-connected, convolutional, pooling and residual layers.  
+                  To the best our knowledge, this is the first provable repair approach that  
+                  has all of these features.  
+                  We implement our approach in a tool called {APRNN}. Using  
+                  {MNIST}, {ImageNet}, and {ACAS} Xu {DNNs}, we show that  
+                  it has better efficiency, scalability, and generalization  
+                  compared to {PRDNN} and {REASSURE}, prior provable repair methods that are  
+                  not architecture preserving.},
+  pages        = {124:443--124:467},
+  issue        = {{PLDI}},
+  journaltitle = {Proceedings of the ACM on Programming Languages},
+  author       = {Tao, Zhe and Nawas, Stephanie and Mitchell, Jacqueline and Thakur, Aditya V.},
+  year         = {2023},
+  urldate      = {2025-04-15},
+  date         = {2023-06-06}
+}
+
+@inproceedings{sotoudeh_provable_2021,
+  location  = {New York, {NY}, {USA}},
+  title     = {Provable repair of deep neural networks},
+  isbn      = {978-1-4503-8391-2},
+  url       = {https://dl.acm.org/doi/10.1145/3453483.3454064},
+  doi       = {10.1145/3453483.3454064},
+  series    = {{PLDI} 2021},
+  abstract  = {Deep Neural Networks ({DNNs}) have grown in popularity over the past decade and are now being used in safety-critical domains such as aircraft collision avoidance. This has motivated a large number of techniques for finding unsafe behavior in {DNNs}. In contrast, this paper tackles the problem of correcting a {DNN} once unsafe behavior is found. We introduce the provable repair problem, which is the problem of repairing a network N to construct a new network N′ that satisfies a given specification. If the safety specification is over a finite set of points, our Provable Point Repair algorithm can find a provably minimal repair satisfying the specification, regardless of the activation functions used. For safety specifications addressing convex polytopes containing infinitely many points, our Provable Polytope Repair algorithm can find a provably minimal repair satisfying the specification for {DNNs} using piecewise-linear activation functions. The key insight behind both of these algorithms is the introduction of a Decoupled {DNN} architecture, which allows us to reduce provable repair to a linear programming problem. Our experimental results demonstrate the efficiency and effectiveness of our Provable Repair algorithms on a variety of challenging tasks.},
+  pages     = {588--603},
+  booktitle = {Proceedings of the 42nd {ACM} {SIGPLAN} International Conference on Programming Language Design and Implementation},
+  publisher = {Association for Computing Machinery},
+  author    = {Sotoudeh, Matthew and Thakur, Aditya V.},
+  year      = {2021},
+  urldate   = {2025-04-14},
+  date      = {2021-06-18}
+}
