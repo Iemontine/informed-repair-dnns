@@ -1,0 +1,40 @@
+# LaTeX temporary files
+*.aux
+*.log
+*.toc
+*.lof
+*.lot
+*.out
+*.synctex.gz
+*.bbl
+*.blg
+*.fls
+*.fdb_latexmk
+*.bcf
+*.run.xml
+
+# LaTeX output files (PDF typically shouldn't be ignored, but you may choose to)
+# *.pdf
+
+# BibTeX-related files
+*-blx.bib
+
+# Editor files
+.vscode/
+*~
+*.swp
+*.swo
+.DS_Store
+
+# Python-related files (if you have Python scripts for data processing)
+__pycache__/
+*.py[cod]
+*$py.class
+.ipynb_checkpoints/
+
+# Data files that shouldn't be tracked (if any)
+*.npy
+*.npz
+*.h5
+*.pkl
+*.pt
