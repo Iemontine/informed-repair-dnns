@@ -4,4 +4,25 @@ version = "0.1.0"
 description = "Informed Repair of Deep Neural Networks"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "sytorch==0.1.8",
+    "numpy==1.26.4",
+    "torch>=2.5.0",
+    "torchattacks==3.5.1",
+    "torchvision>=0.21.0",
+    "tqdm==4.67.1",
+    "gurobipy==12.0.1",
+]
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-cpu", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]
+torchvision = [
+  { index = "pytorch-cpu", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
