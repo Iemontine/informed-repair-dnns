@@ -1,0 +1,7 @@
+[project]
+name = "informed-repair"
+version = "0.1.0"
+description = "Informed Repair of Deep Neural Networks"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
