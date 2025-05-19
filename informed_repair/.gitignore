@@ -1,0 +1,14 @@
+# ignore sytorch license
+*.lic
+
+# ignore venv
+.venv/
+
+# ignore pycache
+__pycache__/
+
+# ignore pycache
+*.pyc
+
+# ignore vscode
+.vscode/
