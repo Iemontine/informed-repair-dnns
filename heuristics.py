@@ -41,10 +41,20 @@ class EditHeuristic:
         param.requires_edit_(mask=mask, lb=lb, ub=ub)
         return model
     
+    def edit():
+        """
+        Edit the model based on the heuristic.
+        This method should be implemented in subclasses.
+        """
+        raise NotImplementedError("Subclasses should implement this method.")
+    
 
 class ActivationBased(EditHeuristic):
     def __init__(self):
         super().__init__()
+
+
+    # TODO: completely ai-generated & untested
     
     def _collect_activations(self, model, dataset, device=torch.device('cpu')):
         """
@@ -121,43 +131,19 @@ class ActivationBased(EditHeuristic):
             raise ValueError(f"Unknown selection method: {method}")
     
     def edit_highest_activation_layer(self, model, dataset, lb, ub, device=torch.device('cpu')):
-        """
-        Edit the layer with the highest activation magnitude.
-        
-        Args:
-            model: PyTorch model (assumed to be Sequential)
-            dataset: Dataset to collect activations on
-            lb: Lower bound for edits
-            ub: Upper bound for edits
-            device: Device to run computations on
-        
-        Returns:
-            Edited model
-        """
+        """Edit the layer with the highest activation magnitude."""
         layer_idx = self.select_layer_by_activation(model, dataset, device, method='highest')
         return self.edit_single_layer(model, layer_idx, lb, ub)
     
     def edit_from_highest_activation(self, model, dataset, lb, ub, device=torch.device('cpu')):
-        """
-        Edit all layers starting from the one with highest activation magnitude.
-        
-        Args:
-            model: PyTorch model (assumed to be Sequential)
-            dataset: Dataset to collect activations on
-            lb: Lower bound for edits
-            ub: Upper bound for edits
-            device: Device to run computations on
-        
-        Returns:
-            Edited model
-        """
+        """Edit all layers starting from the one with highest activation magnitude."""
         start_layer = self.select_layer_by_activation(model, dataset, device, method='highest')
         return self.edit_from_layer(model, start_layer, lb, ub)
 
 
 class SetHeuristic:
     def __init__(self):
-        self.editset = None
+        self.editset: Optional[torch.utils.data.Dataset] = None
 
     def load_edit_set(self, 
         images: torch.Tensor, 

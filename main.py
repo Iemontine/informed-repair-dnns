@@ -4,7 +4,7 @@ import torch
 from torch import nn
 import torchvision
 
-from heuristics import ActivationBased
+from heuristics import ActivationBased, SetHeuristic
 
 ROOT = "./data"
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -33,7 +33,8 @@ def main():
             nn.ReLU(),
             nn.Linear(100, 10),
         ).to(device=DEVICE, dtype=torch.float32),
-        heuristic = ActivationBased,
+        edit_heuristic=ActivationBased,
+        set_heuristic=SetHeuristic, # TODO: implement a different set heuristic
     )
 
     # network = models.vit_b_32(pretrained=True, eval=True)
