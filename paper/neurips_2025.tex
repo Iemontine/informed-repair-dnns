@@ -153,32 +153,46 @@ However, we still expect our results to apply to larger and more complex models.
 
 Our choosen models are:
 \begin{description}
-    \item[Some MLP] {Some description}
-    \item[\textbf{SqueezeNet \cite{squeezenet}}] SqueezeNet is a CNN architecture designed for high efficiency by minimizing parameters, employing dimensionality reduction and late downsampling, achieving AlexNet-level accuracy with significantly fewer parameters.
-    \item[\textbf{MobileViT-XX-Small \cite{mobilevit}}] MobileViT-XX-Small is a highly efficient hybrid vision model that combines the local feature learning of CNNs with the global context capabilities of Vision Transformers through a specialized MobileViT block, making it ideal for mobile and resource-constrained environments.
-    \item[\textbf{DistilBERT \cite{distilbert}}] DistilBERT is a smaller, faster, and lighter version of BERT achieved through knowledge distillation, significantly reducing its parameter count and inference time.
+	\item[Some MLP] {Some description}
+	\item[SqueezeNet \cite{squeezenet}] SqueezeNet is a CNN architecture designed for high efficiency by minimizing parameters, employing dimensionality reduction and late downsampling, achieving AlexNet-level accuracy with significantly fewer parameters.
+	\item[MobileViT-XX-Small \cite{mobilevit}] MobileViT-XX-Small is a highly efficient hybrid vision model that combines the local feature learning of CNNs with the global context capabilities of Vision Transformers through a specialized MobileViT block, making it ideal for mobile and resource-constrained environments.
+	\item[DistilBERT \cite{distilbert}] DistilBERT is a smaller, faster, and lighter version of BERT achieved through knowledge distillation, significantly reducing its parameter count and inference time.
 \end{description}
 
-\subsection{Summary}
+\subsubsection{Selected Datasets}
+We will use the following datasets for our experimentation that correspond to the selected pre-trained models.
+
+\begin{description}
+	\item[ImageNet \cite{imagenet}] {
+		ImageNet is a large-scale image dataset with over 14 million labeled images across 20,000 categories, widely used for training and evaluating computer vision models.
+		ImageNet is used by both SqueezeNet and MobileViT-XX-Small.
+		}
+	\item[GLUE \cite{GLUE}] {
+		The General Language Understanding Evaluation (GLUE) benchmark is a collection of nine diverse NLP tasks designed to evaluate the performance of models on various language understanding challenges.
+		GLUE is used by DistilBERT.
+		}
+\end{description}
+
+\subsubsection{Summary}
 
 The following table summarizes the models and datasets we use in our experimentation.
 
-\begin{longtable}{p{0.25\textwidth} p{0.65\textwidth}}
+\begin{longtable}{p{0.33\textwidth} p{0.33\textwidth} p{0.33\textwidth}}
 	\toprule
-	\textbf{Architecture} & \textbf{Model}                           \\
+	\textbf{Architecture} & \textbf{Model}                      & \textbf{Dataset}         \\
 	\midrule
 	\endhead
 	\bottomrule
 	\endfoot
 	\bottomrule
 	\endlastfoot
-	MLPs & !TODO \\
+	MLPs                  & !TODO                               & !TODO                    \\
 	\midrule
-  CNNs & SqueezeNet \cite{squeezenet} \\
+	CNNs                  & SqueezeNet \cite{squeezenet}        & ImageNet \cite{imagenet} \\
 	\midrule
-	Vision Transformers & MobileViT-XX-Small \cite{mobilevit}                                 \\
+	Vision Transformers   & MobileViT-XX-Small \cite{mobilevit} & ImageNet \cite{imagenet} \\
 	\midrule
-  Language Transformers & DistilBERT \cite{distilbert} \\
+	Language Transformers & DistilBERT \cite{distilbert}        & GLUE \cite{GLUE}         \\
 \end{longtable}
 
 \subsection{Evaluation Metrics}
