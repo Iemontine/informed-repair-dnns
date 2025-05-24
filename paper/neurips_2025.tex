@@ -151,9 +151,14 @@ We picked models that are relativly well-established for their respective tasks.
 We also purposefully choose smaller models for ease of experimentation.
 However, we still expect our results to apply to larger and more complex models.
 
-Our choosen models are:
+Our chosen models are:
 \begin{description}
-	\item[Some MLP] {Some description}
+	\item[Clustering MLP] {By implementing a simple supervised clustering problem, we can create a simple MLP model that is trained to classify points in a 2D space into two clusters.
+		We will use the \texttt{make\_moons} function from \texttt{sklearn.datasets} to generate a dataset, where an MLP will be insufficiently trained on this dataset to classify the points into two clusters.
+		By either increasing the complexity of the dataset (e.g. the number of points, noise), or by not training the MLP enough, we can apply our heuristics to see if any significant improvements can be made, or if there are any significant differences between the heuristics.
+		}
+	By training an MLP on a supervised (known labels) clustering task, we can create a simple MLP model that is trained to classify points in a 2D space into two clusters.
+		}
 	\item[SqueezeNet \cite{squeezenet}] SqueezeNet is a CNN architecture designed for high efficiency by minimizing parameters, employing dimensionality reduction and late downsampling, achieving AlexNet-level accuracy with significantly fewer parameters.
 	\item[MobileViT-XX-Small \cite{mobilevit}] MobileViT-XX-Small is a highly efficient hybrid vision model that combines the local feature learning of CNNs with the global context capabilities of Vision Transformers through a specialized MobileViT block, making it ideal for mobile and resource-constrained environments.
 	\item[DistilBERT \cite{distilbert}] DistilBERT is a smaller, faster, and lighter version of BERT achieved through knowledge distillation, significantly reducing its parameter count and inference time.
