@@ -25,23 +25,25 @@
 \usepackage{nicefrac}       % compact symbols for 1/2, etc.
 \usepackage{microtype}      % microtypography
 \usepackage{xcolor}         % colors
+\usepackage{booktabs} % For better looking tables
+\usepackage{longtable} % For tables that might span multiple pages
 
 \title{Informed Repair of Deep Neural Networks}
 
 \begin{document}
 
 \author{
-    Akshat Adsule \\
-    University of California, Davis \\
-    \texttt{aadsule@ucdavis.edu}
-    \And
-    Darroll Saddi \\
-    University of California, Davis \\
-    \texttt{dwsaddi@ucdavis.edu}
-    \And
-    Suyash Goel \\
-    University of California, Davis \\
-    \texttt{sngoel@ucdavis.edu}
+	Akshat Adsule \\
+	University of California, Davis \\
+	\texttt{aadsule@ucdavis.edu}
+	\And
+	Darroll Saddi \\
+	University of California, Davis \\
+	\texttt{dwsaddi@ucdavis.edu}
+	\And
+	Suyash Goel \\
+	University of California, Davis \\
+	\texttt{sngoel@ucdavis.edu}
 }
 
 \maketitle
@@ -73,7 +75,7 @@ The choice of repair set, which defines the repair polytope, is also left to the
 The composition and scope of this set influence the repair outcome and how well the fix generalizes to similar, unseen inputs.
 This situation is not ideal because these choices can be arbitrary and greatly impact the quality of the repair.
 
-This paper aims to investigate and develop heuristics to guide the DNN repair process, specifically addressing the ambiguities highlighted above in methods like APRNN. 
+This paper aims to investigate and develop heuristics to guide the DNN repair process, specifically addressing the ambiguities highlighted above in methods like APRNN.
 By providing data-driven or structurally-informed ways to make these choices, we seek to enable more efficient and informed repairs of DNNs.
 We propose to explore and evaluate various heuristics, including but not limited to:
 
@@ -82,35 +84,136 @@ We propose to explore and evaluate various heuristics, including but not limited
 % \subsubsection*{Layer Selection Heuristics}
 \underline{Layer Selection Heuristics:}
 \begin{description}
-    \item[Activation-Based] Selecting the start layer based on metrics calculated across the repair set, such as the layer exhibiting the highest average activation magnitude or the highest variance in activations.
-    \item[Gradient/Sensitivity-Based] Identifying layers where parameters show the most sensitivity (e.g., largest gradient norms) with respect to the inputs in the repair set, indicating layers most influential on the incorrect output.
-    \item[Change-Based (for Adversarial Inputs)] Selecting the layer whose activations or feature representations changed most drastically between the original and adversarial inputs in the repair set.
-    \item[Feature-Similarity Based] Choosing a layer where the internal representations of the inputs within the repair set are most similar, suggesting a point of unified processing relevant to the required fix.
-    \item[Layer Type/Position] Simple heuristics such as always choosing the first fully-connected layer after convolutional blocks, or the penultimate layer.
-    \item[Brute Force] Exhaustively evaluating all layers and selecting the one that yields the best repair outcome, though this is computationally expensive.
+	\item[Activation-Based] Selecting the start layer based on metrics calculated across the repair set, such as the layer exhibiting the highest average activation magnitude or the highest variance in activations.
+	\item[Gradient/Sensitivity-Based] Identifying layers where parameters show the most sensitivity (e.g., largest gradient norms) with respect to the inputs in the repair set, indicating layers most influential on the incorrect output.
+	\item[Change-Based (for Adversarial Inputs)] Selecting the layer whose activations or feature representations changed most drastically between the original and adversarial inputs in the repair set.
+	\item[Feature-Similarity Based] Choosing a layer where the internal representations of the inputs within the repair set are most similar, suggesting a point of unified processing relevant to the required fix.
+	\item[Layer Type/Position] Simple heuristics such as always choosing the first fully-connected layer after convolutional blocks, or the penultimate layer.
+	\item[Brute Force] Exhaustively evaluating all layers and selecting the one that yields the best repair outcome, though this is computationally expensive.
 \end{description}
 
 \underline{Repair Set Analysis}
 \begin{description}
-    \item[Diversity] Evaluating the diversity of the repair set, such as the number of unique classes or the distribution of inputs across the input space.
-    \item[Concentration] Analyzing the concentration of points defining the polytope, such as the number of points needed to define a convex hull or the dimensionality of the convex hull.
-    \item[Size] Considering the size of the repair set, including the number of points and the dimensionality of the input space.
+	\item[Diversity] Evaluating the diversity of the repair set, such as the number of unique classes or the distribution of inputs across the input space.
+	\item[Concentration] Analyzing the concentration of points defining the polytope, such as the number of points needed to define a convex hull or the dimensionality of the convex hull.
+	\item[Size] Considering the size of the repair set, including the number of points and the dimensionality of the input space.
 \end{description}
 
-We plan to also evaluate these heuristics on the architecture of [] trained on the [] dataset.
-We also hope to use the following metrics to evaluate the heuristics:
+% We plan to also evaluate these heuristics on the architecture of [] trained on the [] dataset.
+% We also hope to use the following metrics to evaluate the heuristics:
 
-\underline{Evaluation Metrics:}
-\begin{description}
-    \item[Repair Success Rate] The percentage of inputs in the repair set for which the model produces the correct output after repair.
-    \item[Generalization] The model's performance on unseen inputs similar to those in the repair set, measured by accuracy or other relevant metrics.
-    \item[Locality] The extent to which the repair minimally affects the model's behavior on inputs outside the repair set, often quantified by changes in the model's predictions or parameter values.
-    \item[Efficiency] The computational cost of the repair process, including time and resources required.
-    \item[Scalability] The ability of the repair method to handle larger models or repair sets without significant degradation in performance or efficiency. [May not be able to measure this in this project]
-\end{description}
+% \underline{Evaluation Metrics:}
+% \begin{description}
+%     \item[Repair Success Rate] The percentage of inputs in the repair set for which the model produces the correct output after repair.
+%     \item[Generalization] The model's performance on unseen inputs similar to those in the repair set, measured by accuracy or other relevant metrics.
+%     \item[Locality] The extent to which the repair minimally affects the model's behavior on inputs outside the repair set, often quantified by changes in the model's predictions or parameter values.
+%     \item[Efficiency] The computational cost of the repair process, including time and resources required.
+%     \item[Scalability] The ability of the repair method to handle larger models or repair sets without significant degradation in performance or efficiency. [May not be able to measure this in this project]
+% \end{description}
 
 This project enhances AI trustworthiness by making the crucial process of model repair—itself a method for increasing trust after failures—more efficient and informed. Current repair techniques can involve arbitrary choices, leading to unpredictable outcomes. By developing heuristics to guide decisions within the repair process, such as selecting the optimal network layer for modification, we enable more systematic, reliable, and effective correction of identified flaws. This ultimately increases confidence in the robustness and safety of AI systems by ensuring that necessary fixes are applied more predictably and with a better understanding of their potential impact.
 
+\section{Experimental Setup}
+
+The experiments are designed to answer the primary research question:
+\textit{How do different heuristics for layer selection (e.g., activation-based, gradient-based) and repair set analysis (e.g., diversity, concentration) influence the effectiveness, generalization, locality, and efficiency of DNN repair techniques like APRNN?}
+We aim to determine which heuristics provide the most significant improvements over arbitrary or naive selection strategies.
+
+\subsection{Models \& Datasets}
+
+\subsubsection{Selected Architectures}
+We aim to identify heuristics for a wide variety of model types and repair types.
+We choose models that are frequenty used in most machine learning tasks.
+These include:
+
+\begin{description}
+	\item[Multi-Level Perceptrons (MLPs)] {
+		MLPs are foundational neural networks with hidden layers, fully connected neurons, and non-linear activations used widely for classification and regression tasks.
+		}
+	\item[Convolutional Neural Networks (CNNs)] {
+		CNNs excel at processing grid-like data, especially images, by using convolutional layers to learn spatial feature hierarchies.
+		CNNs are most used for vision tasks such as classification, object detection, and segmentation.
+		}
+	\item[Vision Transformers (ViTs)] {
+		ViTs apply the Transformer architecture to images by treating them as sequences of patches and using self-attention to capture global context.
+		They have similar applications to CNNs and are used (as the name suggests) for vision tasks.
+		}
+	\item[Language Transformers] {
+		Similar to ViTs, Language Transformers leverage self-attention to understand contextual relationships between words in text.
+		Language transforms are used in NLP tasks like machine translation, text summarization, and question answering.
+		}
+\end{description}
+
+\subsubsection{Selected Models}
+
+For experimentation purposes, we choose the following pre-trained models for each aforementioned model architecture.
+We picked models that are relativly well-established for their respective tasks.
+We also purposefully choose smaller models for ease of experimentation.
+However, we still expect our results to apply to larger and more complex models.
+
+Our chosen models are:
+\begin{description}
+	\item[Clustering MLP] {
+		To simulate a classic use of MLPs, we implemented a simple supervised clustering problem, we can create a simple MLP model that is trained to classify points in a 2D space into two clusters.
+		}
+	\item[SqueezeNet \cite{squeezenet}] SqueezeNet is a CNN architecture designed for high efficiency by minimizing parameters, employing dimensionality reduction and late downsampling, achieving AlexNet-level accuracy with significantly fewer parameters.
+	\item[MobileViT-XX-Small \cite{mobilevit}] MobileViT-XX-Small is a highly efficient hybrid vision model that combines the local feature learning of CNNs with the global context capabilities of Vision Transformers through a specialized MobileViT block, making it ideal for mobile and resource-constrained environments.
+	\item[DistilBERT \cite{distilbert}] DistilBERT is a smaller, faster, and lighter version of BERT achieved through knowledge distillation, significantly reducing its parameter count and inference time.
+\end{description}
+
+\subsubsection{Selected Datasets}
+We will use the following datasets for our experimentation that correspond to the selected pre-trained models.
+
+\begin{description}
+	\item[Custom Clusering Dataset] {
+		We will use the \texttt{make\_moons} function from \texttt{sklearn.datasets} to generate a dataset, where an MLP will be insufficiently trained on this dataset to classify the points into two clusters.
+		By either increasing the complexity of the dataset (e.g. the number of points, noise), or by not training the MLP enough, we can apply our heuristics to see if any significant improvements can be made, or if there are any significant differences between the heuristics.
+		By training an MLP on a supervised (known labels) clustering task, we can create a simple MLP model that is trained to classify points in a 2D space into two clusters.
+		}
+	\item[ImageNet \cite{imagenet}] {
+		ImageNet is a large-scale image dataset with over 14 million labeled images across 20,000 categories, widely used for training and evaluating computer vision models.
+		ImageNet is used by both SqueezeNet and MobileViT-XX-Small.
+		}
+	\item[GLUE \cite{GLUE}] {
+		The General Language Understanding Evaluation (GLUE) benchmark is a collection of nine diverse NLP tasks designed to evaluate the performance of models on various language understanding challenges.
+		GLUE is used by DistilBERT.
+		}
+\end{description}
+
+\subsubsection{Summary}
+
+The following table summarizes the models and datasets we use in our experimentation.
+
+\begin{longtable}{p{0.33\textwidth} p{0.33\textwidth} p{0.33\textwidth}}
+	\toprule
+	\textbf{Architecture} & \textbf{Model}                      & \textbf{Dataset}          \\
+	\midrule
+	\endhead
+	\bottomrule
+	\endfoot
+	\bottomrule
+	\endlastfoot
+	MLPs                  & Custom Clustering Model             & Custom Clustering Dataset \\
+	\midrule
+	CNNs                  & SqueezeNet \cite{squeezenet}        & ImageNet \cite{imagenet}  \\
+	\midrule
+	Vision Transformers   & MobileViT-XX-Small \cite{mobilevit} & ImageNet \cite{imagenet}  \\
+	\midrule
+	Language Transformers & DistilBERT \cite{distilbert}        & GLUE \cite{GLUE}          \\
+\end{longtable}
+
+\subsection{Evaluation Metrics}
+We will evaluate the heuristics based on the following metrics:
+\begin{description}
+	\item[Repair Success Rate] The percentage of inputs in the repair set for which the model produces the correct output after repair.
+	\item[Generalization] The model's performance on unseen inputs similar to those in the repair set, measured by accuracy or other relevant metrics.
+	\item[Locality] The extent to which the repair minimally affects the model's behavior on inputs outside the repair set, often quantified by changes in the model's predictions or parameter values.
+	\item[Efficiency] The computational cost of the repair process, including time and resources required.
+	\item[Scalability] The ability of the repair method to handle larger models or repair sets without significant degradation in performance or efficiency.
+\end{description}
+
+
+\newpage
 % Add bibliography at the end
 \bibliographystyle{plainnat}
 \bibliography{references}
