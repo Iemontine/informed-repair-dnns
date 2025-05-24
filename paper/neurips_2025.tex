@@ -153,11 +153,8 @@ However, we still expect our results to apply to larger and more complex models.
 
 Our chosen models are:
 \begin{description}
-	\item[Clustering MLP] {By implementing a simple supervised clustering problem, we can create a simple MLP model that is trained to classify points in a 2D space into two clusters.
-		We will use the \texttt{make\_moons} function from \texttt{sklearn.datasets} to generate a dataset, where an MLP will be insufficiently trained on this dataset to classify the points into two clusters.
-		By either increasing the complexity of the dataset (e.g. the number of points, noise), or by not training the MLP enough, we can apply our heuristics to see if any significant improvements can be made, or if there are any significant differences between the heuristics.
-		}
-	By training an MLP on a supervised (known labels) clustering task, we can create a simple MLP model that is trained to classify points in a 2D space into two clusters.
+	\item[Clustering MLP] {
+		To simulate a classic use of MLPs, we implemented a simple supervised clustering problem, we can create a simple MLP model that is trained to classify points in a 2D space into two clusters.
 		}
 	\item[SqueezeNet \cite{squeezenet}] SqueezeNet is a CNN architecture designed for high efficiency by minimizing parameters, employing dimensionality reduction and late downsampling, achieving AlexNet-level accuracy with significantly fewer parameters.
 	\item[MobileViT-XX-Small \cite{mobilevit}] MobileViT-XX-Small is a highly efficient hybrid vision model that combines the local feature learning of CNNs with the global context capabilities of Vision Transformers through a specialized MobileViT block, making it ideal for mobile and resource-constrained environments.
@@ -168,6 +165,11 @@ Our chosen models are:
 We will use the following datasets for our experimentation that correspond to the selected pre-trained models.
 
 \begin{description}
+	\item[Custom Clusering Dataset] {
+		We will use the \texttt{make\_moons} function from \texttt{sklearn.datasets} to generate a dataset, where an MLP will be insufficiently trained on this dataset to classify the points into two clusters.
+		By either increasing the complexity of the dataset (e.g. the number of points, noise), or by not training the MLP enough, we can apply our heuristics to see if any significant improvements can be made, or if there are any significant differences between the heuristics.
+		By training an MLP on a supervised (known labels) clustering task, we can create a simple MLP model that is trained to classify points in a 2D space into two clusters.
+		}
 	\item[ImageNet \cite{imagenet}] {
 		ImageNet is a large-scale image dataset with over 14 million labeled images across 20,000 categories, widely used for training and evaluating computer vision models.
 		ImageNet is used by both SqueezeNet and MobileViT-XX-Small.
@@ -184,20 +186,20 @@ The following table summarizes the models and datasets we use in our experimenta
 
 \begin{longtable}{p{0.33\textwidth} p{0.33\textwidth} p{0.33\textwidth}}
 	\toprule
-	\textbf{Architecture} & \textbf{Model}                      & \textbf{Dataset}         \\
+	\textbf{Architecture} & \textbf{Model}                      & \textbf{Dataset}          \\
 	\midrule
 	\endhead
 	\bottomrule
 	\endfoot
 	\bottomrule
 	\endlastfoot
-	MLPs                  & !TODO                               & !TODO                    \\
+	MLPs                  & Custom Clustering Model             & Custom Clustering Dataset \\
 	\midrule
-	CNNs                  & SqueezeNet \cite{squeezenet}        & ImageNet \cite{imagenet} \\
+	CNNs                  & SqueezeNet \cite{squeezenet}        & ImageNet \cite{imagenet}  \\
 	\midrule
-	Vision Transformers   & MobileViT-XX-Small \cite{mobilevit} & ImageNet \cite{imagenet} \\
+	Vision Transformers   & MobileViT-XX-Small \cite{mobilevit} & ImageNet \cite{imagenet}  \\
 	\midrule
-	Language Transformers & DistilBERT \cite{distilbert}        & GLUE \cite{GLUE}         \\
+	Language Transformers & DistilBERT \cite{distilbert}        & GLUE \cite{GLUE}          \\
 \end{longtable}
 
 \subsection{Evaluation Metrics}
@@ -210,6 +212,8 @@ We will evaluate the heuristics based on the following metrics:
 	\item[Scalability] The ability of the repair method to handle larger models or repair sets without significant degradation in performance or efficiency.
 \end{description}
 
+
+\newpage
 % Add bibliography at the end
 \bibliographystyle{plainnat}
 \bibliography{references}
