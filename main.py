@@ -14,8 +14,7 @@ def main():
     mlp_test()
 
 def mlp_test():
-    editable_model = models.mlp(path=f'{ROOT}/moon_classifier_mlp.pth')
-
+    model = models.mlp(path=f'{ROOT}/moon_classifier_mlp.pth')
     moon_data = torch.load(f"{ROOT}/moon_dataset.pt")
     moon_dataset = torch.utils.data.TensorDataset(moon_data['features'], moon_data['labels'])
 
@@ -38,7 +37,7 @@ def mlp_test():
     )
 
     loader = Loader(
-        editable_model=editable_model,
+        model=model,
         edit_heuristic=edit_heuristic,
         set_heuristic=set_heuristic,
         dataset=moon_dataset,
