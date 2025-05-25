@@ -30,13 +30,12 @@ def mlp_test():
         ub=0.1,
     )
 
-    set_heuristic = SetHeuristic(
+    set_heuristic = SubsetSetHeuristic(
         filename=f"{ROOT}/moon_misclassifications.pt",
         device=DEVICE,
         dtype=torch.float32,
+        indices=torch.tensor([2])
     )
-
-    set_heuristic = SubsetSetHeuristic(set_heuristic, indices=torch.tensor([2]))
 
     loader = Loader(
         editable_model=editable_model,
