@@ -12,14 +12,14 @@ from torchvision.models import ViT_B_16_Weights, ViT_B_32_Weights
 def vit_b_32(pretrained: bool = True, eval: bool = True):
     weights = ViT_B_32_Weights.DEFAULT if pretrained else None
     network = torchvision.models.vit_b_32(weights=weights).train(mode = not eval)
-    network = st.nn.to_editable(network)
+    # network = st.nn.to_editable(network)
     return network
 
 # Use if vit_b_32 is too coarse
 def vit_b_16(pretrained: bool = True, eval: bool = True):
     weights = ViT_B_16_Weights.DEFAULT if pretrained else None
     network = torchvision.models.vit_b_16(weights=weights).train(mode = not eval)
-    network = st.nn.to_editable(network)
+    # network = st.nn.to_editable(network)
     return network
 
 def mlp(path: Path = None,
@@ -40,8 +40,10 @@ def mlp(path: Path = None,
             torch.load(path, weights_only=True, map_location=device)
         )
 
-    model = deepcopy(model)                         # Copy model to not modify original
-    editable_model = st.nn.to_editable(model)       # Convert to editable symbolic model
-    editable_model.solver.verbose_(False)           # Disable solver verbose output
+    return model
 
+def convert_model_to_editable(model: nn.Module) -> nn.Module:
+    editable_model = deepcopy(model)                    # Copy model to not modify original
+    editable_model = st.nn.to_editable(editable_model)  # Convert to editable symbolic model
+    editable_model.solver.verbose_(False)               # Disable solver verbose output
     return editable_model
