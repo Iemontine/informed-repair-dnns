@@ -30,6 +30,7 @@ class Loader: # TODO: need more descriptive name
         )
 
         # Convert the editable model to a standard PyTorch model
+        self.model.load_state_dict(editable_model.state_dict())
         self.model.eval()
 
         dataloader = torch.utils.data.DataLoader(self.dataset, batch_size=self.batch_size)
@@ -52,3 +53,10 @@ class Loader: # TODO: need more descriptive name
         print(f"Accuracy: {accuracy:.4f}, Loss: {avg_loss:.4f}")
 
         return accuracy, avg_loss
+
+    def save_model(self, path: str) -> None:
+        if self.model is not None:
+            torch.save(self.model.state_dict(), path)
+            print(f"Model saved to {path}")
+        else:
+            print("No model to save.")
