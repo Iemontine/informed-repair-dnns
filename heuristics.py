@@ -47,7 +47,47 @@ class EditHeuristic:
         This method should be implemented in subclasses.
         """
         raise NotImplementedError("Subclasses should implement this method.")
-    
+
+
+class SingleLayerHeuristic(EditHeuristic):
+    def __init__(self, layer_idx: int, lb: float = -1.0, ub: float = 1.0):
+        """
+        Initialize the heuristic to edit a single layer.
+        
+        Args:
+            layer_idx: Index of the layer to edit
+            lb: Lower bound for the edit
+            ub: Upper bound for the edit
+        """
+        super().__init__()
+        self.layer_idx = layer_idx
+        self.lb = lb
+        self.ub = ub
+
+    def edit(self, model):
+        """Edit the specified layer in the model."""
+        return self.edit_single_layer(model, self.layer_idx, self.lb, self.ub)
+
+
+class FromLayerHeuristic(EditHeuristic):
+    def __init__(self, start_layer: int, lb: float = -1.0, ub: float = 1.0):
+        """
+        Initialize the heuristic to edit layers from a specified index.
+        
+        Args:
+            start_layer: Index of the layer to start editing from
+            lb: Lower bound for the edit
+            ub: Upper bound for the edit
+        """
+        super().__init__()
+        self.start_layer = start_layer
+        self.lb = lb
+        self.ub = ub
+
+    def edit(self, model):
+        """Edit all layers starting from the specified layer in the model."""
+        return self.edit_from_layer(model, self.start_layer, self.lb, self.ub)
+
 
 class ActivationBased(EditHeuristic):
     def __init__(self):
@@ -142,25 +182,58 @@ class ActivationBased(EditHeuristic):
 
 
 class SetHeuristic:
-    def __init__(self):
-        self.editset: Optional[torch.utils.data.Dataset] = None
+    def __init__(self, 
+        filename: Optional[str] = None,
+        features: torch.Tensor = None, 
+        labels: torch.Tensor = None, 
+        device: torch.device = torch.device('cpu'), 
+        dtype: torch.dtype = torch.float32, 
+        size: Optional[int] = None
+    ):
+        self.editset: Optional[torch.utils.data.TensorDataset] = None
+        if filename is not None:
+            self.editset = self._load_edit_set_from_file(
+                filename, device, dtype, size
+            )
+        elif features is not None and labels is not None:
+            self.editset = self._load_edit_set_from_features_labels(
+                features, labels, device, dtype, size
+            )
+        else:
+            raise ValueError("Either filename or both features and labels must be provided.")
 
-    def load_edit_set(self, 
-        images: torch.Tensor, 
-        labels: torch.Tensor,
+
+    def _load_edit_set_from_file(self,
+        filename: str,
         device: torch.device = torch.device('cpu'),
         dtype: torch.dtype = torch.float32,
-        shape: Tuple[int, ...] = (3, 32, 32),   # TODO: this is a bad default
         size: Optional[int] = None,
     ) -> torch.utils.data.TensorDataset:
-        images = images.to(device=device, dtype=dtype).reshape(-1, *shape) / 255.
+        """
+        Load a dataset from a file and return it as a TensorDataset.
+        """
+        data = torch.load(filename)
+        features = data['features']
+        labels = data['labels']
+
+        return self._load_edit_set_from_features_labels(features, labels, device, dtype, size)
+
+
+    def _load_edit_set_from_features_labels(self, 
+        features: torch.Tensor, 
+        labels: torch.Tensor,
+        device: torch.device,
+        dtype: torch.dtype,
+        size: Optional[int],
+    ) -> torch.utils.data.TensorDataset:
+        features = features.to(device=device, dtype=dtype) # .reshape(-1, *shape) / 255. # <-- used for colors where shape was shape: Tuple[int, ...] = (3, 32, 32),
         labels = labels.to(device=device, dtype=torch.int64)
 
         if size is not None:
-            images = images[:size]
+            features = features[:size]
             labels = labels[:size]
 
         return torch.utils.data.TensorDataset(
-            images,
+            features,
             labels
         )
