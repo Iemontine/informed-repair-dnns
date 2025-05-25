@@ -55,8 +55,5 @@ class Loader: # TODO: need more descriptive name
         return accuracy, avg_loss
 
     def save_model(self, path: str) -> None:
-        if self.model is not None:
-            torch.save(self.model.state_dict(), path)
-            print(f"Model saved to {path}")
-        else:
-            print("No model to save.")
+        torch.save(self.editable_model.state_dict(), path)
+        print(f"Model saved to {path}")
