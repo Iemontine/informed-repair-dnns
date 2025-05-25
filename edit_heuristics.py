@@ -1,52 +1,35 @@
-from typing import Optional, Tuple
+from set_heuristics import SetHeuristic
 import torch
 
-
 class EditHeuristic:
-    def edit_single_layer(self, model, layer_idx, lb, ub):
-        """
-        Edit only a single layer of the model.
-        """
-        model[layer_idx].requires_edit_(lb=lb, ub=ub)
-        return model
+    def __init__(self):
+        self.mark_required_edits = None
 
-    def edit_from_layer(self, model, start_layer, lb, ub):
-        """
-        Edit all layers from the specified layer to the end of the model.
-        """
-        model[start_layer:].requires_edit_(lb=lb, ub=ub)
-        return model
 
-    def edit_with_mask(self, model, layer_idx, lb, ub, param_name="weight", mask=None, condition=None):
-        """
-        Edit part of the parameters in a layer, specified by a mask.
-        Args:
-            mask: Boolean mask specifying which parameters to edit.
-            param_name: Parameter to edit ("weight" or "bias")
-            condition: Function that creates a mask (e.g., lambda x: x > 0)
+    def edit(
+            self,
+            editable_model: torch.nn.Module,    # Editable model to optimize
+            set_heuristic: SetHeuristic,             
+            lb: float = -0.2,                   # Lower bound for parameter changes
+            ub: float = 0.2,                    # Upper bound for parameter changes
+    ) -> torch.nn.Module:
+        editable_model = self.mark_required_edits(editable_model)
 
-            mask and condition should be mutually exclusive.
-            If both are provided, mask will be used.
-        """
+        inputs, labels = set_heuristic.get_inputs_and_labels()
 
-        # TODO: add support for parameter selection based on some output of model, 
-        # e.g. activation, gradient/sensitivity based
-        # currently, supports simple masks only
+        # Perform symbolic forward pass
+        symbolic_outputs = editable_model(inputs).data
 
-        param = getattr(model[layer_idx], param_name)
+        # Assert that the edited model must correctly classify all inputs
+        output_constraints = symbolic_outputs.argmax(-1) == labels
+        output_constraints.assert_()
+
+        # Define the optimization objective
+        objective = editable_model.param_delta().norm_ub('linf+l1n')
         
-        if mask is None and condition is not None:
-            mask = condition(param)
-        
-        param.requires_edit_(mask=mask, lb=lb, ub=ub)
-        return model
-    
-    def edit():
-        """
-        Edit the model based on the heuristic.
-        This method should be implemented in subclasses.
-        """
-        raise NotImplementedError("Subclasses should implement this method.")
+        # Optimize the model with the given objective
+        if editable_model.optimize(minimize=objective):
+            return editable_model
 
 
 class SingleLayerHeuristic(EditHeuristic):
@@ -59,14 +42,17 @@ class SingleLayerHeuristic(EditHeuristic):
             lb: Lower bound for the edit
             ub: Upper bound for the edit
         """
-        super().__init__()
+        def edit_single_layer(editable_model):
+            """
+            Edit only a single layer of the model.
+            """
+            editable_model[self.layer_idx].requires_edit_(lb=self.lb, ub=self.ub)
+            return editable_model
+
+        self.mark_required_edits = edit_single_layer
         self.layer_idx = layer_idx
         self.lb = lb
         self.ub = ub
-
-    def edit(self, model):
-        """Edit the specified layer in the model."""
-        return self.edit_single_layer(model, self.layer_idx, self.lb, self.ub)
 
 
 class FromLayerHeuristic(EditHeuristic):
@@ -79,14 +65,19 @@ class FromLayerHeuristic(EditHeuristic):
             lb: Lower bound for the edit
             ub: Upper bound for the edit
         """
+
+        def edit_from_layer(editable_model):
+            """
+            Edit all layers from the specified layer to the end of the model.
+            """
+            editable_model[self.start_layer:].requires_edit_(lb=self.lb, ub=self.ub)
+            return editable_model
+
         super().__init__()
+        self.mark_required_edits = edit_from_layer
         self.start_layer = start_layer
         self.lb = lb
         self.ub = ub
-
-    def edit(self, model):
-        """Edit all layers starting from the specified layer in the model."""
-        return self.edit_from_layer(model, self.start_layer, self.lb, self.ub)
 
 
 class ActivationBased(EditHeuristic):
@@ -179,61 +170,3 @@ class ActivationBased(EditHeuristic):
         """Edit all layers starting from the one with highest activation magnitude."""
         start_layer = self.select_layer_by_activation(model, dataset, device, method='highest')
         return self.edit_from_layer(model, start_layer, lb, ub)
-
-
-class SetHeuristic:
-    def __init__(self, 
-        filename: Optional[str] = None,
-        features: torch.Tensor = None, 
-        labels: torch.Tensor = None, 
-        device: torch.device = torch.device('cpu'), 
-        dtype: torch.dtype = torch.float32, 
-        size: Optional[int] = None
-    ):
-        self.editset: Optional[torch.utils.data.TensorDataset] = None
-        if filename is not None:
-            self.editset = self._load_edit_set_from_file(
-                filename, device, dtype, size
-            )
-        elif features is not None and labels is not None:
-            self.editset = self._load_edit_set_from_features_labels(
-                features, labels, device, dtype, size
-            )
-        else:
-            raise ValueError("Either filename or both features and labels must be provided.")
-
-
-    def _load_edit_set_from_file(self,
-        filename: str,
-        device: torch.device = torch.device('cpu'),
-        dtype: torch.dtype = torch.float32,
-        size: Optional[int] = None,
-    ) -> torch.utils.data.TensorDataset:
-        """
-        Load a dataset from a file and return it as a TensorDataset.
-        """
-        data = torch.load(filename)
-        features = data['features']
-        labels = data['labels']
-
-        return self._load_edit_set_from_features_labels(features, labels, device, dtype, size)
-
-
-    def _load_edit_set_from_features_labels(self, 
-        features: torch.Tensor, 
-        labels: torch.Tensor,
-        device: torch.device,
-        dtype: torch.dtype,
-        size: Optional[int],
-    ) -> torch.utils.data.TensorDataset:
-        features = features.to(device=device, dtype=dtype) # .reshape(-1, *shape) / 255. # <-- used for colors where shape was shape: Tuple[int, ...] = (3, 32, 32),
-        labels = labels.to(device=device, dtype=torch.int64)
-
-        if size is not None:
-            features = features[:size]
-            labels = labels[:size]
-
-        return torch.utils.data.TensorDataset(
-            features,
-            labels
-        )

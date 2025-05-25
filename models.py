@@ -1,3 +1,7 @@
+from typing import Optional
+from pathlib import Path
+
+from copy import deepcopy
 import sytorch as st
 import torch
 import torch.nn as nn
@@ -18,25 +22,26 @@ def vit_b_16(pretrained: bool = True, eval: bool = True):
     network = st.nn.to_editable(network)
     return network
 
-def mlp():
-    class MLP(nn.Module):
-        def __init__(self):
-            super(MLP, self).__init__()
-            self.layers = nn.Sequential(
-                nn.Linear(2, 32),
-                nn.ReLU(),
-                nn.Linear(32, 64),
-                nn.ReLU(),
-                nn.Linear(64, 32),
-                nn.ReLU(),
-                nn.Linear(32, 2)  # 2 classes
-            )
-            
-        def forward(self, x):
-            return self.layers(x)
+def mlp(path: Path = None,
+    device: torch.device = torch.device('cpu'),
+    dtype: torch.dtype = torch.float32,
+) -> nn.Sequential:
+    model = nn.Sequential(
+            nn.Linear(2, 32),
+            nn.ReLU(),
+            nn.Linear(32, 64),
+            nn.ReLU(),
+            nn.Linear(64, 32),
+            nn.ReLU(),
+            nn.Linear(32, 2)  # 2 classes
+    ).to(device=device, dtype=dtype)
+    if path is not None:
+        model.load_state_dict(
+            torch.load(path, weights_only=True, map_location=device)
+        )
 
+    model = deepcopy(model)                         # Copy model to not modify original
+    editable_model = st.nn.to_editable(model)       # Convert to editable symbolic model
+    editable_model.solver.verbose_(False)           # Disable solver verbose output
 
-    loaded_model = MLP()
-    loaded_model.load_state_dict(torch.load('data/moon_classifier_mlp.pth'))
-    loaded_model.eval()
-    return loaded_model
+    return editable_model
