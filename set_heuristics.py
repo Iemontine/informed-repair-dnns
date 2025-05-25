@@ -85,14 +85,20 @@ class SetHeuristic:
 
 class SubsetSetHeuristic(SetHeuristic):
     def __init__(self, 
-        set_heuristic: SetHeuristic,
+        filename: Optional[str] = None,
+        features: torch.Tensor = None, 
+        labels: torch.Tensor = None, 
+        device: torch.device = torch.device('cpu'), 
+        dtype: torch.dtype = torch.float32, 
+        size: Optional[int] = None,
         indices: Optional[torch.Tensor] = None,
     ):
-        self.set_heuristic = set_heuristic
+        super().__init__(filename, features, labels, device, dtype, size)
         self.indices = indices
 
+
     def get_inputs_and_labels(self) -> Tuple[Tensor, Tensor]:
-        inputs, labels = self.set_heuristic.get_inputs_and_labels()
+        inputs, labels = super().get_inputs_and_labels()
 
         if self.indices is not None:
             inputs = inputs[self.indices]
