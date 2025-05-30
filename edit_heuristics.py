@@ -1,53 +1,84 @@
-from typing import Optional, Tuple
+from set_heuristics import SetHeuristic
 import torch
 
-
 class EditHeuristic:
-    def edit_single_layer(self, model, layer_idx, lb, ub):
-        """
-        Edit only a single layer of the model.
-        """
-        model[layer_idx].requires_edit_(lb=lb, ub=ub)
-        return model
+    def __init__(self):
+        self.mark_required_edits = None
 
-    def edit_from_layer(self, model, start_layer, lb, ub):
-        """
-        Edit all layers from the specified layer to the end of the model.
-        """
-        model[start_layer:].requires_edit_(lb=lb, ub=ub)
-        return model
 
-    def edit_with_mask(self, model, layer_idx, lb, ub, param_name="weight", mask=None, condition=None):
+    def edit(
+            self,
+            editable_model: torch.nn.Module,    # Editable model to optimize
+            set_heuristic: SetHeuristic,             
+            lb: float = -0.2,                   # Lower bound for parameter changes
+            ub: float = 0.2,                    # Upper bound for parameter changes
+    ) -> torch.nn.Module:
+        editable_model = self.mark_required_edits(editable_model)
+
+        inputs, labels = set_heuristic.get_inputs_and_labels()
+
+        # Perform symbolic forward pass
+        symbolic_outputs = editable_model(inputs).data
+
+        # Assert that the edited model must correctly classify all inputs
+        output_constraints = symbolic_outputs.argmax(-1) == labels
+        output_constraints.assert_()
+
+        # Define the optimization objective
+        objective = editable_model.param_delta().norm_ub('linf+l1n')
+        
+        # Optimize the model with the given objective
+        if editable_model.optimize(minimize=objective):
+            return editable_model
+
+
+class SingleLayerHeuristic(EditHeuristic):
+    def __init__(self, layer_idx: int, lb: float = -1.0, ub: float = 1.0):
         """
-        Edit part of the parameters in a layer, specified by a mask.
+        Initialize the heuristic to edit a single layer.
+        
         Args:
-            mask: Boolean mask specifying which parameters to edit.
-            param_name: Parameter to edit ("weight" or "bias")
-            condition: Function that creates a mask (e.g., lambda x: x > 0)
-
-            mask and condition should be mutually exclusive.
-            If both are provided, mask will be used.
+            layer_idx: Index of the layer to edit
+            lb: Lower bound for the edit
+            ub: Upper bound for the edit
         """
+        def edit_single_layer(editable_model):
+            """
+            Edit only a single layer of the model.
+            """
+            editable_model[self.layer_idx].requires_edit_(lb=self.lb, ub=self.ub)
+            return editable_model
 
-        # TODO: add support for parameter selection based on some output of model, 
-        # e.g. activation, gradient/sensitivity based
-        # currently, supports simple masks only
+        self.mark_required_edits = edit_single_layer
+        self.layer_idx = layer_idx
+        self.lb = lb
+        self.ub = ub
 
-        param = getattr(model[layer_idx], param_name)
+
+class FromLayerHeuristic(EditHeuristic):
+    def __init__(self, start_layer: int, lb: float = -1.0, ub: float = 1.0):
+        """
+        Initialize the heuristic to edit layers from a specified index.
         
-        if mask is None and condition is not None:
-            mask = condition(param)
-        
-        param.requires_edit_(mask=mask, lb=lb, ub=ub)
-        return model
-    
-    def edit():
+        Args:
+            start_layer: Index of the layer to start editing from
+            lb: Lower bound for the edit
+            ub: Upper bound for the edit
         """
-        Edit the model based on the heuristic.
-        This method should be implemented in subclasses.
-        """
-        raise NotImplementedError("Subclasses should implement this method.")
-    
+
+        def edit_from_layer(editable_model):
+            """
+            Edit all layers from the specified layer to the end of the model.
+            """
+            editable_model[self.start_layer:].requires_edit_(lb=self.lb, ub=self.ub)
+            return editable_model
+
+        super().__init__()
+        self.mark_required_edits = edit_from_layer
+        self.start_layer = start_layer
+        self.lb = lb
+        self.ub = ub
+
 
 class ActivationBased(EditHeuristic):
     def __init__(self):
@@ -139,28 +170,3 @@ class ActivationBased(EditHeuristic):
         """Edit all layers starting from the one with highest activation magnitude."""
         start_layer = self.select_layer_by_activation(model, dataset, device, method='highest')
         return self.edit_from_layer(model, start_layer, lb, ub)
-
-
-class SetHeuristic:
-    def __init__(self):
-        self.editset: Optional[torch.utils.data.Dataset] = None
-
-    def load_edit_set(self, 
-        images: torch.Tensor, 
-        labels: torch.Tensor,
-        device: torch.device = torch.device('cpu'),
-        dtype: torch.dtype = torch.float32,
-        shape: Tuple[int, ...] = (3, 32, 32),   # TODO: this is a bad default
-        size: Optional[int] = None,
-    ) -> torch.utils.data.TensorDataset:
-        images = images.to(device=device, dtype=dtype).reshape(-1, *shape) / 255.
-        labels = labels.to(device=device, dtype=torch.int64)
-
-        if size is not None:
-            images = images[:size]
-            labels = labels[:size]
-
-        return torch.utils.data.TensorDataset(
-            images,
-            labels
-        )
