@@ -127,12 +127,28 @@ class SimilaritySetHeuristic(SetHeuristic):
         # By scanning each of the inputs in the edit set, find the subset that includes the most similar inputs
         # Compute pairwise cosine similarities
         inputs_flat = inputs.view(inputs.size(0), -1)  # Flatten inputs for similarity computation
-        similarities = torch.mm(inputs_flat, inputs_flat.t())  # Dot product
-        norms = torch.norm(inputs_flat, dim=1, keepdim=True)
-        similarities = similarities / (norms * norms.t())  # Cosine similarity
+        
+        # Normalize inputs to unit vectors for proper cosine similarity
+        inputs_normalized = torch.nn.functional.normalize(inputs_flat, p=2, dim=1)
+        similarities = torch.mm(inputs_normalized, inputs_normalized.t())  # Cosine similarity
+        
+        # Remove self-similarities (diagonal) to get a better sense of the similarity distribution
+        mask = ~torch.eye(similarities.size(0), dtype=torch.bool, device=self.device)
+        similarities_no_diag = similarities[mask]
+        
+        # Scale threshold based on the actual similarity distribution
+        mean_sim = similarities_no_diag.mean()
+        std_sim = similarities_no_diag.std()
+        
+        # Use a scaled threshold: mean + (threshold * std)
+        # This makes the threshold adaptive to the actual similarity range in your data
+        scaled_threshold = mean_sim + (self.similarity_threshold * std_sim)
+        
+        # Clamp to reasonable bounds
+        scaled_threshold = torch.clamp(scaled_threshold, -1.0, 1.0)
 
-        # Create adjacency matrix based on similarity threshold
-        adjacency = (similarities > self.similarity_threshold).float()
+        # Create adjacency matrix based on scaled similarity threshold
+        adjacency = (similarities > scaled_threshold).float()
 
         # Find connected components (groups of similar inputs)
         visited = torch.zeros(inputs.size(0), dtype=torch.bool, device=self.device)
