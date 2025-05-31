@@ -2,9 +2,10 @@ from set_heuristics import SetHeuristic
 import torch
 
 class EditHeuristic:
-    def __init__(self):
+    def __init__(self, lb: float = -1.0, ub: float = 1.0):
         self.mark_required_edits = None
-
+        self.lb = lb
+        self.ub = ub
 
     def edit(
             self,
@@ -42,6 +43,10 @@ class SingleLayerHeuristic(EditHeuristic):
             lb: Lower bound for the edit
             ub: Upper bound for the edit
         """
+        super().__init__(lb, ub)
+
+        self.layer_idx = layer_idx
+
         def edit_single_layer(editable_model):
             """
             Edit only a single layer of the model.
@@ -50,9 +55,7 @@ class SingleLayerHeuristic(EditHeuristic):
             return editable_model
 
         self.mark_required_edits = edit_single_layer
-        self.layer_idx = layer_idx
-        self.lb = lb
-        self.ub = ub
+
 
 
 class FromLayerHeuristic(EditHeuristic):
@@ -65,6 +68,9 @@ class FromLayerHeuristic(EditHeuristic):
             lb: Lower bound for the edit
             ub: Upper bound for the edit
         """
+        super().__init__(lb, ub)
+
+        self.start_layer = start_layer
 
         def edit_from_layer(editable_model):
             """
@@ -73,100 +79,238 @@ class FromLayerHeuristic(EditHeuristic):
             editable_model[self.start_layer:].requires_edit_(lb=self.lb, ub=self.ub)
             return editable_model
 
-        super().__init__()
         self.mark_required_edits = edit_from_layer
-        self.start_layer = start_layer
-        self.lb = lb
-        self.ub = ub
 
 
 class ActivationBased(EditHeuristic):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, dataset: torch.utils.data.Dataset, lb: float = -1.0, ub: float = 1.0):
+        super().__init__(lb, ub)
+        self.dataset = dataset
 
+        def edit_activation_based(editable_model):
+            # Collect layer-wise activations from the dataset
+            layer_activations = {}
+            
+            # Hook function to capture activations
+            def get_activation(name):
+                def hook(model, input, output):
+                    _ = model  # Acknowledge unused parameter
+                    _ = input  # Acknowledge unused parameter
+                    if name not in layer_activations:
+                        layer_activations[name] = []
+                    layer_activations[name].append(output.detach())
+                return hook
+            
+            # Register hooks for each layer
+            hooks = []
+            for i, layer in enumerate(editable_model):
+                hook = layer.register_forward_hook(get_activation(f'layer_{i}'))
+                hooks.append(hook)
+            # Forward pass through dataset to collect activations
+            for data in self.dataset:
+                if isinstance(data, (list, tuple)) and len(data) >= 1:
+                    inputs = data[0]
+                else:
+                    inputs = data
+                
+                # Skip if inputs is not a tensor
+                if not isinstance(inputs, torch.Tensor):
+                    continue
+                    
+                with torch.no_grad():
+                    _ = editable_model(inputs.unsqueeze(0))
+            
+            # Remove hooks
+            for hook in hooks:
+                hook.remove()
+            
+            # Calculate metrics for each layer
+            layer_metrics = {}
+            for layer_name, activations in layer_activations.items():
+                if activations:  # Check if activations list is not empty
+                    layer_tensor = torch.cat(activations, dim=0)
+                    avg_magnitude = layer_tensor.abs().mean().item()
+                    variance = layer_tensor.var().item()
+                    layer_metrics[layer_name] = {
+                        'avg_magnitude': avg_magnitude,
+                        'variance': variance
+                    }
+            
+            # Check if we have any layer metrics
+            if not layer_metrics:
+                raise ValueError("No layer activations were captured. Check if the model and dataset are compatible.")
+            
+            # Select start layer based on highest average magnitude + variance
+            best_layer_name = max(layer_metrics.keys(), 
+                                key=lambda x: layer_metrics[x]['avg_magnitude'] + layer_metrics[x]['variance'])
+            start_layer_idx = int(best_layer_name.split('_')[1])
+            
+            # Edit from the selected layer onwards
+            editable_model[start_layer_idx:].requires_edit_(lb=self.lb, ub=self.ub)
+            return editable_model
+        
+        self.mark_required_edits = edit_activation_based
 
-    # TODO: completely ai-generated & untested
-    
-    def _collect_activations(self, model, dataset, device=torch.device('cpu')):
-        """
-        Collect activations from all layers in the model for a dataset.
-        
-        Args:
-            model: PyTorch model (assumed to be Sequential)
-            dataset: Dataset to collect activations on
-            device: Device to run computations on
+class WeightsActivationBased(EditHeuristic):
+    def __init__(self, dataset: torch.utils.data.Dataset, lb: float = -1.0, ub: float = 1.0, threshold: float = 0.5):
+        super().__init__(lb, ub)
+        self.dataset = dataset
+        self.threshold = threshold  # Threshold for determining which weights to edit
+
+        def edit_weights_activation_based(editable_model):
+            # Collect layer-wise activations and gradients from the dataset
+            layer_activations = {}
+            layer_gradients = {}
             
-        Returns:
-            List of average activation magnitudes for each layer
-        """
-        dataloader = torch.utils.data.DataLoader(dataset, batch_size=32, shuffle=False)
-        
-        # Prepare to store activations
-        activations = [0] * len(model)
-        counts = [0] * len(model)
-        
-        # Set up hooks
-        handles = []
-        
-        def get_hook(layer_idx):
-            def hook(module, input, output):
-                # Average the absolute values of the activations
-                activations[layer_idx] += torch.mean(torch.abs(output)).item()
-                counts[layer_idx] += 1
-            return hook
-        
-        # Register hooks for all layers
-        for i in range(len(model)):
-            if hasattr(model[i], 'register_forward_hook'):
-                handle = model[i].register_forward_hook(get_hook(i))
-                handles.append(handle)
-        
-        # Run forward pass
-        model.eval()
-        with torch.no_grad():
-            for inputs, _ in dataloader:
-                inputs = inputs.to(device)
-                _ = model(inputs)
-        
-        # Remove hooks
-        for handle in handles:
-            handle.remove()
-        
-        # Calculate average activation magnitude for each layer
-        for i in range(len(activations)):
-            if counts[i] > 0:
-                activations[i] /= counts[i]
-        
-        return activations
-    
-    def select_layer_by_activation(self, model, dataset, device=torch.device('cpu'), method='highest'):
-        """
-        Select a layer based on activation statistics.
-        
-        Args:
-            model: PyTorch model (assumed to be Sequential)
-            dataset: Dataset to collect activations on
-            device: Device to run computations on
-            method: Selection method ('highest' for highest average activation magnitude)
+            # Hook function to capture activations
+            def get_activation(name):
+                def hook(model, input, output):
+                    _ = model  # Acknowledge unused parameter
+                    _ = input  # Acknowledge unused parameter
+                    if name not in layer_activations:
+                        layer_activations[name] = []
+                    layer_activations[name].append(output.detach())
+                return hook
             
-        Returns:
-            Index of the selected layer
-        """
-        activations = self._collect_activations(model, dataset, device)
+            # Hook function to capture gradients
+            def get_gradient(name):
+                def hook(grad):
+                    if name not in layer_gradients:
+                        layer_gradients[name] = []
+                    layer_gradients[name].append(grad.detach())
+                return hook
+            
+            # Register hooks for each layer
+            hooks = []
+            grad_hooks = []
+            for i, layer in enumerate(editable_model):
+                # Hook for activations
+                hook = layer.register_forward_hook(get_activation(f'layer_{i}'))
+                hooks.append(hook)
+                
+                # Hook for gradients if layer has weights
+                if hasattr(layer, 'weight') and layer.weight is not None:
+                    grad_hook = layer.weight.register_hook(get_gradient(f'layer_{i}_weight'))
+                    grad_hooks.append(grad_hook)
+            
+            # Forward and backward pass through dataset to collect activations and gradients
+            editable_model.train()  # Enable gradient computation
+            for data in self.dataset:
+                if isinstance(data, (list, tuple)) and len(data) >= 2:
+                    inputs, labels = data[0], data[1]
+                else:
+                    inputs = data
+                    labels = None
+                
+                # Skip if inputs is not a tensor
+                if not isinstance(inputs, torch.Tensor):
+                    continue
+                
+                inputs = inputs.unsqueeze(0) if inputs.dim() == 1 else inputs
+                inputs.requires_grad_(True)
+                
+                # Forward pass
+                outputs = editable_model(inputs)
+                
+                # Backward pass if we have labels
+                if labels is not None:
+                    if labels.dim() == 0:
+                        labels = labels.unsqueeze(0)
+                    loss = torch.nn.functional.cross_entropy(outputs, labels)
+                    loss.backward(retain_graph=True)
+                
+                # Clear gradients for next iteration
+                editable_model.zero_grad()
+            
+            # Remove hooks
+            for hook in hooks:
+                hook.remove()
+            for grad_hook in grad_hooks:
+                grad_hook.remove()
+            
+            # Calculate metrics for each layer
+            layer_metrics = {}
+            for layer_name, activations in layer_activations.items():
+                if activations:  # Check if activations list is not empty
+                    layer_tensor = torch.cat(activations, dim=0)
+                    avg_magnitude = layer_tensor.abs().mean().item()
+                    variance = layer_tensor.var().item()
+                    layer_metrics[layer_name] = {
+                        'avg_magnitude': avg_magnitude,
+                        'variance': variance,
+                        'score': avg_magnitude + variance
+                    }
+            
+            # Check if we have any layer metrics
+            if not layer_metrics:
+                raise ValueError("No layer activations were captured. Check if the model and dataset are compatible.")
+            
+            # Sort layers by activation score (highest first)
+            sorted_layers = sorted(layer_metrics.items(), 
+                                 key=lambda x: x[1]['score'], reverse=True)
+            
+            # Edit weights in layers based on activation analysis
+            for layer_name, metrics in sorted_layers:
+                layer_idx = int(layer_name.split('_')[1])
+                layer = editable_model[layer_idx]
+                
+                # Only edit layers that have weights
+                if hasattr(layer, 'weight') and layer.weight is not None:
+                    # Get corresponding gradients if available
+                    grad_key = f'{layer_name}_weight'
+                    if grad_key in layer_gradients and layer_gradients[grad_key]:
+                        # Use gradient magnitude to determine which weights to edit
+                        grad_tensor = torch.cat(layer_gradients[grad_key], dim=0)
+                        avg_grad_magnitude = grad_tensor.abs().mean()
+                        
+                        # Create mask based on gradient magnitude threshold
+                        # For weight matrix, create a mask that affects the output dimension
+                        weight_threshold = avg_grad_magnitude * self.threshold
+                        
+                        # Use output dimension masking - check which output neurons need editing
+                        weight_importance = layer.weight.abs().mean(dim=-1)  # Average over input dimension
+                        output_mask = weight_importance > (weight_importance.mean() * self.threshold)
+                        
+                        # Create weight mask that applies to entire rows (output neurons)
+                        if layer.weight.dim() == 2:  # Linear layer
+                            weight_mask = output_mask.unsqueeze(1).expand_as(layer.weight)
+                        else:
+                            weight_mask = layer.weight.abs() > weight_threshold
+                    else:
+                        # Fallback: use weight magnitude for masking
+                        weight_threshold = layer.weight.abs().mean() * self.threshold
+                        weight_importance = layer.weight.abs().mean(dim=-1)  # Average over input dimension
+                        output_mask = weight_importance > (weight_importance.mean() * self.threshold)
+                        
+                        # Create weight mask that applies to entire rows (output neurons)
+                        if layer.weight.dim() == 2:  # Linear layer
+                            weight_mask = output_mask.unsqueeze(1).expand_as(layer.weight)
+                        else:
+                            weight_mask = layer.weight.abs() > weight_threshold
+                    
+                    # Apply parameter-level editing with mask
+                    layer.weight.requires_edit_(
+                        mask=weight_mask,
+                        lb=self.lb, 
+                        ub=self.ub,
+                    )
+                    
+                    # Edit bias with the same output dimension mask if it exists
+                    if hasattr(layer, 'bias') and layer.bias is not None:
+                        # Use the same output mask to ensure compatibility
+                        layer.bias.requires_edit_(
+                            mask=output_mask,
+                            lb=self.lb,
+                            ub=self.ub,
+                        )
+                    
+                    # For demonstration, we'll edit the top layers by activation score
+                    # You can modify this logic based on your specific requirements
+                    if metrics['score'] > max(m['score'] for m in layer_metrics.values()) * 0.7:
+                        continue  # Edit this layer
+                    else:
+                        break  # Stop editing lower-scoring layers
+            
+            return editable_model
         
-        if method == 'highest':
-            return activations.index(max(activations))
-        elif method == 'lowest':
-            return activations.index(min([a for a in activations if a > 0]))
-        else:
-            raise ValueError(f"Unknown selection method: {method}")
-    
-    def edit_highest_activation_layer(self, model, dataset, lb, ub, device=torch.device('cpu')):
-        """Edit the layer with the highest activation magnitude."""
-        layer_idx = self.select_layer_by_activation(model, dataset, device, method='highest')
-        return self.edit_single_layer(model, layer_idx, lb, ub)
-    
-    def edit_from_highest_activation(self, model, dataset, lb, ub, device=torch.device('cpu')):
-        """Edit all layers starting from the one with highest activation magnitude."""
-        start_layer = self.select_layer_by_activation(model, dataset, device, method='highest')
-        return self.edit_from_layer(model, start_layer, lb, ub)
+        self.mark_required_edits = edit_weights_activation_based
