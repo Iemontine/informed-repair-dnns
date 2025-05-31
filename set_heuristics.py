@@ -107,3 +107,63 @@ class SubsetSetHeuristic(SetHeuristic):
             raise ValueError("Indices must be provided for SubsetSetHeuristic.")
 
         return inputs, labels
+    
+class SimilaritySetHeuristic(SetHeuristic):
+    def __init__(self, 
+        filename: Optional[str] = None,
+        features: torch.Tensor = None, 
+        labels: torch.Tensor = None, 
+        device: torch.device = torch.device('cpu'), 
+        dtype: torch.dtype = torch.float32, 
+        size: Optional[int] = None,
+        similarity_threshold: float = 0.5,
+    ):
+        super().__init__(filename, features, labels, device, dtype, size)
+        self.similarity_threshold = similarity_threshold
+
+    def get_inputs_and_labels(self):
+        inputs, labels = super().get_inputs_and_labels()
+
+        # By scanning each of the inputs in the edit set, find the subset that includes the most similar inputs
+        # Compute pairwise cosine similarities
+        inputs_flat = inputs.view(inputs.size(0), -1)  # Flatten inputs for similarity computation
+        similarities = torch.mm(inputs_flat, inputs_flat.t())  # Dot product
+        norms = torch.norm(inputs_flat, dim=1, keepdim=True)
+        similarities = similarities / (norms * norms.t())  # Cosine similarity
+
+        # Create adjacency matrix based on similarity threshold
+        adjacency = (similarities > self.similarity_threshold).float()
+
+        # Find connected components (groups of similar inputs)
+        visited = torch.zeros(inputs.size(0), dtype=torch.bool, device=self.device)
+        largest_component = []
+        largest_size = 0
+
+        for i in range(inputs.size(0)):
+            if not visited[i]:
+                # BFS to find connected component
+                component = []
+                queue = [i]
+                while queue:
+                    node = queue.pop(0)
+                    if not visited[node]:
+                        visited[node] = True
+                        component.append(node)
+                        # Add neighbors
+                        neighbors = torch.where(adjacency[node] == 1)[0]
+                        for neighbor in neighbors:
+                            if not visited[neighbor]:
+                                queue.append(neighbor.item())
+                
+                # Update largest component if this one is bigger
+                if len(component) > largest_size:
+                    largest_component = component
+                    largest_size = len(component)
+
+        # Filter inputs and labels to only include the largest similar group
+        if largest_component:
+            indices = torch.tensor(largest_component, device=self.device)
+            inputs = inputs[indices]
+            labels = labels[indices]
+
+        return inputs, labels
