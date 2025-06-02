@@ -215,11 +215,9 @@ class MisclassifiedSetHeuristic(SetHeuristic):
         self.dataset = dataset
         self.max_samples = max_samples
         
-        if filename is not None:
-            # Use pre-computed misclassifications from file (more efficient)
+        if filename is not None: # Use pre-computed misclassifications from file (more efficient)
             misclassified_features, misclassified_labels = self._load_from_file(filename)
-        elif model is not None and dataset is not None:
-            # Compute misclassifications by evaluating model on dataset
+        elif model is not None and dataset is not None: # Compute misclassifications by evaluating model on dataset
             misclassified_features, misclassified_labels = self._find_misclassified_samples()
         else:
             raise ValueError("Either filename or (model + dataset) must be provided")
@@ -385,3 +383,62 @@ class ByClassSetHeuristic(SetHeuristic):
             raise ValueError(f"No samples found for class {self.target_class} in the dataset")
         
         return torch.stack(class_features), torch.stack(class_labels)
+
+
+class FullDatasetHeuristic(SetHeuristic):
+    """
+    A set heuristic that includes the entire dataset.
+    This heuristic doesn't filter or select specific samples - it uses all available data.
+    """
+    def __init__(self, 
+        dataset: torch.utils.data.Dataset,
+        filename: Optional[str] = None,
+        features: torch.Tensor = None, 
+        labels: torch.Tensor = None, 
+        device: torch.device = torch.device('cpu'), 
+        dtype: torch.dtype = torch.float32, 
+        max_samples: Optional[int] = None
+    ):
+        self.dataset = dataset
+        self.max_samples = max_samples
+        
+        if dataset is not None:
+            # Extract all features and labels from the dataset
+            all_features = []
+            all_labels = []
+            
+            for i, data in enumerate(dataset):
+                if self.max_samples is not None and i >= self.max_samples:
+                    break
+                    
+                if isinstance(data, (tuple, list)) and len(data) >= 2:
+                    inputs, labels = data[0], data[1]
+                else:
+                    # Handle case where dataset only contains features
+                    inputs = data
+                    continue  # Skip if no labels available
+                
+                if not isinstance(inputs, torch.Tensor) or not isinstance(labels, torch.Tensor):
+                    continue
+                
+                # Add batch dimension if needed
+                if inputs.dim() == 1:
+                    inputs = inputs.unsqueeze(0)
+                if labels.dim() == 0:
+                    labels = labels.unsqueeze(0)
+                
+                all_features.append(inputs)
+                all_labels.append(labels)
+            
+            if not all_features:
+                raise ValueError("No valid samples found in the dataset")
+            
+            # Convert to tensors
+            features = torch.cat(all_features, dim=0).to(dtype)
+            labels = torch.cat(all_labels, dim=0)
+            
+            # Call parent constructor with extracted features and labels
+            super().__init__(None, features, labels, device, dtype, None)
+        else:
+            # Fall back to parent constructor for file-based or direct tensor input
+            super().__init__(filename, features, labels, device, dtype, None)
