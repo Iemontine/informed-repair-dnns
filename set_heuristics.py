@@ -371,14 +371,14 @@ class ByClassSetHeuristic(SetHeuristic):
                 target_labels = labels[target_class_mask]
                 
                 for i in range(target_inputs.size(0)):
-                    if self.max_samples is None or samples_collected < self.max_samples:
+                    if self.max_samples is None or self.max_samples == -1 or samples_collected < self.max_samples:
                         class_features.append(target_inputs[i])
                         class_labels.append(target_labels[i])
                         samples_collected += 1
                     else:
                         break
                 
-                if self.max_samples is not None and samples_collected >= self.max_samples:
+                if self.max_samples is not None and self.max_samples != -1 and samples_collected >= self.max_samples:
                     break
         
         if not class_features:
