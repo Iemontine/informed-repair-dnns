@@ -183,3 +183,205 @@ class SimilaritySetHeuristic(SetHeuristic):
             labels = labels[indices]
 
         return inputs, labels
+
+
+class MisclassifiedSetHeuristic(SetHeuristic):
+    """
+    Create a set heuristic from all misclassified samples.
+    This heuristic can either:
+    1. Load pre-computed misclassified samples from a file (more efficient)
+    2. Evaluate the model on the dataset to find misclassifications (fallback)
+    """
+    def __init__(self, 
+        model: torch.nn.Module = None,
+        dataset: torch.utils.data.Dataset = None,
+        filename: Optional[str] = None,
+        device: torch.device = torch.device('cpu'), 
+        dtype: torch.dtype = torch.float32, 
+        max_samples: Optional[int] = None
+    ):
+        """
+        Initialize MisclassifiedSetHeuristic.
+        
+        Args:
+            model: The model to evaluate for misclassifications (used if filename is None)
+            dataset: Dataset to evaluate (used if filename is None)
+            filename: Path to pre-computed misclassifications file (more efficient if available)
+            device: Device to run computations on
+            dtype: Data type for tensors
+            max_samples: Maximum number of misclassified samples to collect (-1 for all)
+        """
+        self.model = model
+        self.dataset = dataset
+        self.max_samples = max_samples
+        
+        if filename is not None:
+            # Use pre-computed misclassifications from file (more efficient)
+            misclassified_features, misclassified_labels = self._load_from_file(filename)
+        elif model is not None and dataset is not None:
+            # Compute misclassifications by evaluating model on dataset
+            misclassified_features, misclassified_labels = self._find_misclassified_samples()
+        else:
+            raise ValueError("Either filename or (model + dataset) must be provided")
+        
+        # Initialize parent with the misclassified samples
+        super().__init__(
+            features=misclassified_features, 
+            labels=misclassified_labels, 
+            device=device, 
+            dtype=dtype
+        )
+    
+    def _load_from_file(self, filename: str) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Load misclassified samples from a pre-computed file."""
+        data = torch.load(filename)
+        if isinstance(data, dict) and 'features' in data and 'labels' in data:
+            features = data['features']
+            labels = data['labels']
+            
+            # Apply max_samples limit if specified
+            if self.max_samples is not None and len(features) > self.max_samples:
+                features = features[:self.max_samples]
+                labels = labels[:self.max_samples]
+                
+            return features, labels
+        else:
+            raise ValueError(f"File {filename} does not contain expected 'features' and 'labels' keys")
+    
+    
+    def _find_misclassified_samples(self) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Find all misclassified samples in the dataset."""
+        misclassified_features = []
+        misclassified_labels = []
+        samples_collected = 0
+        
+        self.model.eval()
+        with torch.no_grad():
+            for data in self.dataset:
+                if isinstance(data, (list, tuple)) and len(data) >= 2:
+                    inputs, labels = data[0], data[1]
+                else:
+                    # Handle case where dataset only contains features
+                    inputs = data
+                    continue  # Skip if no labels available
+                
+                if not isinstance(inputs, torch.Tensor) or not isinstance(labels, torch.Tensor):
+                    continue
+                
+                # Add batch dimension if needed
+                if inputs.dim() == 1:
+                    inputs = inputs.unsqueeze(0)
+                if labels.dim() == 0:
+                    labels = labels.unsqueeze(0)
+                
+                # Get model predictions
+                outputs = self.model(inputs)
+                predicted = torch.argmax(outputs, dim=1)
+                
+                # Find misclassified samples
+                misclassified_mask = predicted != labels
+                
+                if misclassified_mask.any():
+                    misclassified_inputs = inputs[misclassified_mask]
+                    misclassified_targets = labels[misclassified_mask]
+                    
+                    for i in range(misclassified_inputs.size(0)):
+                        if self.max_samples is None or samples_collected < self.max_samples:
+                            misclassified_features.append(misclassified_inputs[i])
+                            misclassified_labels.append(misclassified_targets[i])
+                            samples_collected += 1
+                        else:
+                            break
+                    
+                    if self.max_samples is not None and samples_collected >= self.max_samples:
+                        break
+        
+        if not misclassified_features:
+            raise ValueError("No misclassified samples found in the dataset")
+        
+        return torch.stack(misclassified_features), torch.stack(misclassified_labels)
+
+
+class ByClassSetHeuristic(SetHeuristic):
+    """
+    Create a set heuristic containing all samples from a specific class.
+    This heuristic selects all samples that belong to a target class,
+    regardless of whether they were correctly classified or not.
+    """
+    def __init__(self, 
+        dataset: torch.utils.data.Dataset,
+        target_class: int,
+        device: torch.device = torch.device('cpu'), 
+        dtype: torch.dtype = torch.float32, 
+        max_samples: Optional[int] = None
+    ):
+        """
+        Initialize ByClassSetHeuristic.
+        
+        Args:
+            dataset: Dataset to sample from
+            target_class: The class index to collect samples for
+            device: Device to run computations on
+            dtype: Data type for tensors
+            max_samples: Maximum number of samples to collect (-1 for all)
+        """
+        self.dataset = dataset
+        self.target_class = target_class
+        self.max_samples = max_samples
+        
+        # Find samples of the target class
+        class_features, class_labels = self._find_class_samples()
+        
+        # Initialize parent with the class samples
+        super().__init__(
+            features=class_features, 
+            labels=class_labels, 
+            device=device, 
+            dtype=dtype
+        )
+    
+    def _find_class_samples(self) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Find all samples belonging to the target class."""
+        class_features = []
+        class_labels = []
+        samples_collected = 0
+        
+        for data in self.dataset:
+            if isinstance(data, (list, tuple)) and len(data) >= 2:
+                inputs, labels = data[0], data[1]
+            else:
+                # Handle case where dataset only contains features
+                inputs = data
+                continue  # Skip if no labels available
+            
+            if not isinstance(inputs, torch.Tensor) or not isinstance(labels, torch.Tensor):
+                continue
+            
+            # Add batch dimension if needed
+            if inputs.dim() == 1:
+                inputs = inputs.unsqueeze(0)
+            if labels.dim() == 0:
+                labels = labels.unsqueeze(0)
+            
+            # Find samples of the target class
+            target_class_mask = labels == self.target_class
+            
+            if target_class_mask.any():
+                target_inputs = inputs[target_class_mask]
+                target_labels = labels[target_class_mask]
+                
+                for i in range(target_inputs.size(0)):
+                    if self.max_samples is None or samples_collected < self.max_samples:
+                        class_features.append(target_inputs[i])
+                        class_labels.append(target_labels[i])
+                        samples_collected += 1
+                    else:
+                        break
+                
+                if self.max_samples is not None and samples_collected >= self.max_samples:
+                    break
+        
+        if not class_features:
+            raise ValueError(f"No samples found for class {self.target_class} in the dataset")
+        
+        return torch.stack(class_features), torch.stack(class_labels)
