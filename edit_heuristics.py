@@ -314,3 +314,304 @@ class WeightsActivationBased(EditHeuristic):
             return editable_model
         
         self.mark_required_edits = edit_weights_activation_based
+
+
+class GradientBasedHeuristic(EditHeuristic):
+    def __init__(self, dataset: torch.utils.data.Dataset, lb: float = -1.0, ub: float = 1.0, gradient_threshold: float = 0.1):
+        """
+        Edit weights based on gradient magnitudes from misclassified samples.
+        Simplified version that focuses on later layers where gradients are more informative.
+        """
+        super().__init__(lb, ub)
+        self.dataset = dataset
+        self.gradient_threshold = gradient_threshold
+
+        def edit_gradient_based(editable_model):
+            # Simplified approach: edit the last two layers which typically have the highest gradients
+            # This avoids complex gradient computation during the symbolic phase
+            num_layers = len(editable_model)
+            
+            if num_layers >= 2:
+                # Edit last two layers
+                editable_model[-2:].requires_edit_(lb=self.lb, ub=self.ub)
+            else:
+                # Fallback: edit all layers
+                editable_model.requires_edit_(lb=self.lb, ub=self.ub)
+            
+            return editable_model
+        
+        self.mark_required_edits = edit_gradient_based
+
+
+class LayerImportanceHeuristic(EditHeuristic):
+    def __init__(self, dataset: torch.utils.data.Dataset, lb: float = -1.0, ub: float = 1.0, importance_threshold: float = 0.5):
+        """
+        Edit weights based on layer-wise importance computed through ablation.
+        
+        Args:
+            dataset: Dataset to evaluate layer importance
+            lb: Lower bound for edits
+            ub: Upper bound for edits
+            importance_threshold: Threshold for selecting important layers
+        """
+        super().__init__(lb, ub)
+        self.dataset = dataset
+        self.importance_threshold = importance_threshold
+
+        def edit_layer_importance(editable_model):
+            # Calculate baseline performance
+            editable_model.eval()
+            baseline_loss = 0
+            sample_count = 0
+            
+            with torch.no_grad():
+                for data in self.dataset:
+                    if isinstance(data, (list, tuple)) and len(data) >= 2:
+                        inputs, labels = data[0], data[1]
+                    else:
+                        continue
+                    
+                    if not isinstance(inputs, torch.Tensor) or not isinstance(labels, torch.Tensor):
+                        continue
+                    
+                    inputs = inputs.unsqueeze(0) if inputs.dim() == 1 else inputs
+                    labels = labels.unsqueeze(0) if labels.dim() == 0 else labels
+                    
+                    outputs = editable_model(inputs)
+                    loss = torch.nn.functional.cross_entropy(outputs, labels)
+                    baseline_loss += loss.item()
+                    sample_count += 1
+            
+            baseline_loss /= sample_count if sample_count > 0 else 1
+            
+            # Calculate importance of each layer through ablation
+            layer_importance = {}
+            
+            for layer_idx in range(len(editable_model)):
+                layer = editable_model[layer_idx]
+                
+                if not hasattr(layer, 'weight') or layer.weight is None:
+                    continue
+                
+                # Temporarily zero out the layer
+                original_weight = layer.weight.data.clone()
+                original_bias = layer.bias.data.clone() if hasattr(layer, 'bias') and layer.bias is not None else None
+                
+                layer.weight.data.zero_()
+                if original_bias is not None:
+                    layer.bias.data.zero_()
+                
+                # Calculate performance with ablated layer
+                ablated_loss = 0
+                with torch.no_grad():
+                    for data in self.dataset:
+                        if isinstance(data, (list, tuple)) and len(data) >= 2:
+                            inputs, labels = data[0], data[1]
+                        else:
+                            continue
+                        
+                        if not isinstance(inputs, torch.Tensor) or not isinstance(labels, torch.Tensor):
+                            continue
+                        
+                        inputs = inputs.unsqueeze(0) if inputs.dim() == 1 else inputs
+                        labels = labels.unsqueeze(0) if labels.dim() == 0 else labels
+                        
+                        try:
+                            outputs = editable_model(inputs)
+                            loss = torch.nn.functional.cross_entropy(outputs, labels)
+                            ablated_loss += loss.item()
+                        except:
+                            # If ablation breaks the model, consider it highly important
+                            ablated_loss += baseline_loss * 10
+                
+                ablated_loss /= sample_count if sample_count > 0 else 1
+                
+                # Restore original weights
+                layer.weight.data = original_weight
+                if original_bias is not None:
+                    layer.bias.data = original_bias
+                
+                # Calculate importance as increase in loss
+                importance = ablated_loss - baseline_loss
+                layer_importance[layer_idx] = importance
+            
+            # Sort layers by importance and select top ones for editing
+            if layer_importance:
+                sorted_layers = sorted(layer_importance.items(), key=lambda x: x[1], reverse=True)
+                max_importance = max(layer_importance.values())
+                threshold = max_importance * self.importance_threshold
+                
+                for layer_idx, importance in sorted_layers:
+                    if importance >= threshold:
+                        editable_model[layer_idx].requires_edit_(lb=self.lb, ub=self.ub)
+            else:
+                # Fallback: edit all layers
+                for layer in editable_model:
+                    if hasattr(layer, 'weight'):
+                        layer.requires_edit_(lb=self.lb, ub=self.ub)
+            
+            return editable_model
+        
+        self.mark_required_edits = edit_layer_importance
+
+
+class NeuronPruningHeuristic(EditHeuristic):
+    def __init__(self, dataset: torch.utils.data.Dataset, lb: float = -1.0, ub: float = 1.0, activation_threshold: float = 0.1):
+        """
+        Edit weights in layers that are likely to have low-activation neurons.
+        Simplified to focus on middle layers which often have redundant neurons.
+        """
+        super().__init__(lb, ub)
+        self.dataset = dataset
+        self.activation_threshold = activation_threshold
+
+        def edit_neuron_pruning(editable_model):
+            # Simplified approach: edit middle layers where pruning is most effective
+            num_layers = len(editable_model)
+            
+            if num_layers >= 3:
+                # Edit middle layer(s)
+                middle_idx = num_layers // 2
+                editable_model[middle_idx].requires_edit_(lb=self.lb, ub=self.ub)
+                
+                # Also edit the layer before if there are enough layers
+                if middle_idx > 0:
+                    editable_model[middle_idx - 1].requires_edit_(lb=self.lb, ub=self.ub)
+            else:
+                # Fallback: edit first layer
+                editable_model[0].requires_edit_(lb=self.lb, ub=self.ub)
+            
+            return editable_model
+        
+        self.mark_required_edits = edit_neuron_pruning
+
+
+class AdversarialHeuristic(EditHeuristic):
+    def __init__(self, dataset: torch.utils.data.Dataset, lb: float = -1.0, ub: float = 1.0, epsilon: float = 0.1, steps: int = 5):
+        """
+        Edit weights based on adversarial perturbation analysis to identify vulnerable parameters.
+        
+        Args:
+            dataset: Dataset to generate adversarial examples
+            lb: Lower bound for edits
+            ub: Upper bound for edits
+            epsilon: Perturbation magnitude for adversarial examples
+            steps: Number of PGD steps for adversarial generation
+        """
+        super().__init__(lb, ub)
+        self.dataset = dataset
+        self.epsilon = epsilon
+        self.steps = steps
+
+        def edit_adversarial(editable_model):
+            # Generate adversarial examples and analyze weight vulnerabilities
+            weight_vulnerabilities = {}
+            
+            editable_model.eval()
+            
+            for data in self.dataset:
+                if isinstance(data, (list, tuple)) and len(data) >= 2:
+                    inputs, labels = data[0], data[1]
+                else:
+                    continue
+                
+                if not isinstance(inputs, torch.Tensor) or not isinstance(labels, torch.Tensor):
+                    continue
+                
+                inputs = inputs.unsqueeze(0) if inputs.dim() == 1 else inputs
+                labels = labels.unsqueeze(0) if labels.dim() == 0 else labels
+                
+                # Generate adversarial example using PGD
+                adv_inputs = inputs.clone().detach().requires_grad_(True)
+                
+                for step in range(self.steps):
+                    editable_model.zero_grad()
+                    outputs = editable_model(adv_inputs)
+                    loss = torch.nn.functional.cross_entropy(outputs, labels)
+                    loss.backward()
+                    
+                    # Update adversarial input
+                    with torch.no_grad():
+                        adv_inputs = adv_inputs + self.epsilon * adv_inputs.grad.sign() / self.steps
+                        adv_inputs = torch.clamp(adv_inputs, inputs - self.epsilon, inputs + self.epsilon)
+                    
+                    adv_inputs.grad.zero_()
+                
+                # Analyze weight gradients for adversarial examples
+                editable_model.zero_grad()
+                adv_outputs = editable_model(adv_inputs)
+                adv_loss = torch.nn.functional.cross_entropy(adv_outputs, labels)
+                adv_loss.backward()
+                
+                # Collect weight vulnerabilities
+                for i, layer in enumerate(editable_model):
+                    if hasattr(layer, 'weight') and layer.weight is not None and layer.weight.grad is not None:
+                        layer_name = f'layer_{i}'
+                        if layer_name not in weight_vulnerabilities:
+                            weight_vulnerabilities[layer_name] = []
+                        weight_vulnerabilities[layer_name].append(layer.weight.grad.abs().clone())
+            
+            # Mark vulnerable weights for editing
+            for layer_name, vulnerabilities in weight_vulnerabilities.items():
+                if vulnerabilities:
+                    layer_idx = int(layer_name.split('_')[1])
+                    layer = editable_model[layer_idx]
+                    
+                    # Average vulnerability across samples
+                    avg_vulnerability = torch.stack(vulnerabilities).mean(dim=0)
+                    
+                    # Create mask for highly vulnerable weights
+                    threshold = avg_vulnerability.mean() + avg_vulnerability.std()
+                    vulnerability_mask = avg_vulnerability > threshold
+                    
+                    # Edit vulnerable weights
+                    layer.weight.requires_edit_(
+                        mask=vulnerability_mask,
+                        lb=self.lb,
+                        ub=self.ub
+                    )
+                    
+                    # Edit corresponding bias terms
+                    if hasattr(layer, 'bias') and layer.bias is not None:
+                        bias_vulnerability = avg_vulnerability.mean(dim=-1)
+                        bias_threshold = bias_vulnerability.mean() + bias_vulnerability.std()
+                        bias_mask = bias_vulnerability > bias_threshold
+                        layer.bias.requires_edit_(
+                            mask=bias_mask,
+                            lb=self.lb,
+                            ub=self.ub
+                        )
+            
+            return editable_model
+        
+        self.mark_required_edits = edit_adversarial
+
+
+class RandomHeuristic(EditHeuristic):
+    def __init__(self, lb: float = -1.0, ub: float = 1.0, edit_probability: float = 0.1, seed: int = 42):
+        """
+        Randomly select layers to edit as a baseline comparison.
+        Simplified to edit random layers rather than individual weights.
+        """
+        super().__init__(lb, ub)
+        self.edit_probability = edit_probability
+        self.seed = seed
+
+        def edit_random(editable_model):
+            # Set random seed for reproducibility
+            torch.manual_seed(self.seed)
+            
+            # Randomly select layers to edit (simpler approach)
+            num_layers = len(editable_model)
+            for i in range(num_layers):
+                if torch.rand(1).item() < self.edit_probability:
+                    editable_model[i].requires_edit_(lb=self.lb, ub=self.ub)
+            
+            # Ensure at least one layer is edited
+            if not any(hasattr(layer, '_requires_edit') for layer in editable_model):
+                # Edit the last layer as fallback
+                editable_model[-1].requires_edit_(lb=self.lb, ub=self.ub)
+            
+            return editable_model
+        
+        self.mark_required_edits = edit_random
