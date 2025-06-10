@@ -51,14 +51,18 @@
 \maketitle
 
 \begin{abstract}
-Deep neural networks (DNNs) have become increasingly prevalent in modern applications.
-DNNs are widely used in safety-critical settings such as air traffic control, healthcare, and self-driving vehicles.
-However, these networks are not infallible; they are susceptible to adversarial attacks, noisy input, and other corruptions that can have disastrous outcomes if not addressed.
-Recent approaches have introduced methods to provably repair DNNs over a defined edit set, which provide formal guarantees within the repaired region.
-However, these methods do not offer guidance on which internal components or edit sets to repair.
-To address these gaps, we present Informed Repair of DNNs (IRDNN), a framework for using heuristics to guide the editing process.
-IRDNN explores strategies such as activation-based repair, where the edit region is determined by where neuron activations are the highest over the repair set.
-Our goal is to enable more robust, generalizable, and predictable DNN repair through principled heuristic guidance.
+	Deep neural networks (DNNs) have become increasingly prevalent in modern applications.
+	DNNs are widely used in safety-critical settings such as air traffic control, healthcare, and self-driving vehicles.
+	However, these networks are not infallible; they are susceptible to adversarial attacks, noisy input, and other corruptions that can have disastrous outcomes if not addressed.
+	Recent approaches have introduced methods to provably repair DNNs over a defined edit set, which provide formal guarantees within the repaired region.
+	However, these methods do not offer guidance on which internal components or edit sets to repair.
+	To address these gaps, we present Informed Repair of DNNs (IRDNN), a framework for using heuristics to guide the editing process.
+	IRDNN explores strategies such as activation-based repair, where the edit region is determined by where neuron activations are the highest over the repair set.
+	Our goal is to enable more robust, generalizable, and predictable DNN repair through principled heuristic guidance.
+
+	The code used in this project are available in the following two repos for MLP and AlexNet experiments respectivly:
+	\url{https://github.com/Iemontine/informed-repair-dnns}
+	\url{https://github.com/AkshatAdsule/alexnet_repair}
 \end{abstract}
 
 \section{Introduction}
@@ -420,13 +424,6 @@ This work contributes to the broader goal of trustworthy AI by making neural net
 
 Ultimately, our findings demonstrate that while neural network repair remains a challenging problem, informed heuristic selection can significantly improve outcomes. The path forward requires continued research into architecture-specific strategies, better theoretical understanding of parameter modification effects, and the development of more sophisticated tools for predicting and controlling repair outcomes. Through such advances, we can work toward making neural network repair a reliable tool for enhancing AI system trustworthiness and safety.
 
-\section{GitHub}
-
-The code used in this project are available in the following two repos:
-\begin{itemize}
-	\item \textbf{For MLP experiments:} \url{https://github.com/Iemontine/informed-repair-dnns}
-	\item \textbf{For AlexNet experiments:} \url{https://github.com/AkshatAdsule/alexnet_repair}
-\end{itemize}
 
 \newpage
 \bibliographystyle{unsrt}
