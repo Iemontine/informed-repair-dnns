@@ -6,7 +6,7 @@
 % ready for submission
 % \usepackage{neurips_2025}
 
-% to compile a preprint version, e.g., for submission to arXiv, add add the
+% to compile a preprint version, e.\item \emph{Runtime Scaling}: Repair time scales roughly linearly with set size (10~s $\rightarrow$ 50~s).\item \emph{Runtime Scaling}: Repair time scales roughly linearly with set size (10\,s $\rightarrow$ 50\,s).., for submission to arXiv, add add the
 % [preprint] option:
     % \usepackage[preprint]{neurips_2025}
 
@@ -21,12 +21,14 @@
 \usepackage{hyperref}       % hyperlinks
 \usepackage{url}            % simple URL typesetting
 \usepackage{booktabs}       % professional-quality tables
+\usepackage{amsmath}        % AMS math symbols and environments
 \usepackage{amsfonts}       % blackboard math symbols
 \usepackage{nicefrac}       % compact symbols for 1/2, etc.
 \usepackage{microtype}      % microtypography
 \usepackage{xcolor}         % colors
 \usepackage{booktabs} % For better looking tables
 \usepackage{longtable} % For tables that might span multiple pages
+\usepackage{graphicx}      % for including images
 
 \title{Informed Repair of Deep Neural Networks}
 
@@ -111,7 +113,10 @@ We propose to explore and evaluate various heuristics, including but not limited
 %     \item[Scalability] The ability of the repair method to handle larger models or repair sets without significant degradation in performance or efficiency. [May not be able to measure this in this project]
 % \end{description}
 
-This project enhances AI trustworthiness by making the crucial process of model repair—itself a method for increasing trust after failures—more efficient and informed. Current repair techniques can involve arbitrary choices, leading to unpredictable outcomes. By developing heuristics to guide decisions within the repair process, such as selecting the optimal network layer for modification, we enable more systematic, reliable, and effective correction of identified flaws. This ultimately increases confidence in the robustness and safety of AI systems by ensuring that necessary fixes are applied more predictably and with a better understanding of their potential impact.
+This project enhances AI trustworthiness by making the crucial process of model repair, itself a method for increasing trust after failures—more efficient and informed.
+Current repair techniques can involve arbitrary choices, leading to unpredictable outcomes.
+By developing heuristics to guide decisions within the repair process, such as selecting the optimal network layer for modification, we enable more systematic, reliable, and effective correction of identified flaws.
+This ultimately increases confidence in the robustness and safety of AI systems by ensuring that necessary fixes are applied more predictably and with a better understanding of their potential impact.
 
 \section{Experimental Setup}
 
@@ -134,14 +139,6 @@ These include:
 		CNNs excel at processing grid-like data, especially images, by using convolutional layers to learn spatial feature hierarchies.
 		CNNs are most used for vision tasks such as classification, object detection, and segmentation.
 		}
-	\item[Vision Transformers (ViTs)] {
-		ViTs apply the Transformer architecture to images by treating them as sequences of patches and using self-attention to capture global context.
-		They have similar applications to CNNs and are used (as the name suggests) for vision tasks.
-		}
-	\item[Language Transformers] {
-		Similar to ViTs, Language Transformers leverage self-attention to understand contextual relationships between words in text.
-		Language transforms are used in NLP tasks like machine translation, text summarization, and question answering.
-		}
 \end{description}
 
 \subsubsection{Selected Models}
@@ -156,9 +153,7 @@ Our chosen models are:
 	\item[Clustering MLP] {
 		To simulate a classic use of MLPs, we implemented a simple supervised clustering problem, we can create a simple MLP model that is trained to classify points in a 2D space into two clusters.
 		}
-	\item[SqueezeNet \cite{squeezenet}] SqueezeNet is a CNN architecture designed for high efficiency by minimizing parameters, employing dimensionality reduction and late downsampling, achieving AlexNet-level accuracy with significantly fewer parameters.
-	\item[MobileViT-XX-Small \cite{mobilevit}] MobileViT-XX-Small is a highly efficient hybrid vision model that combines the local feature learning of CNNs with the global context capabilities of Vision Transformers through a specialized MobileViT block, making it ideal for mobile and resource-constrained environments.
-	\item[DistilBERT \cite{distilbert}] DistilBERT is a smaller, faster, and lighter version of BERT achieved through knowledge distillation, significantly reducing its parameter count and inference time.
+	\item[AlexNet \cite{alexnet}] AlexNet is a CNN architecture that achieved remarkable success in the ImageNet competition by using deep learning techniques, including ReLU activations and dropout for regularization.
 \end{description}
 
 \subsubsection{Selected Datasets}
@@ -170,13 +165,9 @@ We will use the following datasets for our experimentation that correspond to th
 		By either increasing the complexity of the dataset (e.g. the number of points, noise), or by not training the MLP enough, we can apply our heuristics to see if any significant improvements can be made, or if there are any significant differences between the heuristics.
 		By training an MLP on a supervised (known labels) clustering task, we can create a simple MLP model that is trained to classify points in a 2D space into two clusters.
 		}
-	\item[ImageNet \cite{imagenet}] {
-		ImageNet is a large-scale image dataset with over 14 million labeled images across 20,000 categories, widely used for training and evaluating computer vision models.
-		ImageNet is used by both SqueezeNet and MobileViT-XX-Small.
-		}
-	\item[GLUE \cite{GLUE}] {
-		The General Language Understanding Evaluation (GLUE) benchmark is a collection of nine diverse NLP tasks designed to evaluate the performance of models on various language understanding challenges.
-		GLUE is used by DistilBERT.
+	\item[CIFAR-10 \cite{cifar_10}] {
+		CIFAR-10 is a widely used image dataset consisting of 60,000 32x32 color images in 10 classes, with 6,000 images per class.
+		CIFAR-10 is used by both AlexNet.
 		}
 \end{description}
 
@@ -184,22 +175,18 @@ We will use the following datasets for our experimentation that correspond to th
 
 The following table summarizes the models and datasets we use in our experimentation.
 
-\begin{longtable}{p{0.33\textwidth} p{0.33\textwidth} p{0.33\textwidth}}
+\begin{longtable}{p{0.25\textwidth} p{0.3\textwidth} p{0.35\textwidth}}
 	\toprule
-	\textbf{Architecture} & \textbf{Model}                      & \textbf{Dataset}          \\
+	\textbf{Architecture} & \textbf{Model}          & \textbf{Dataset}          \\
 	\midrule
 	\endhead
 	\bottomrule
 	\endfoot
 	\bottomrule
 	\endlastfoot
-	MLPs                  & Custom Clustering Model             & Custom Clustering Dataset \\
+	MLPs                  & Custom Clustering Model & Custom Clustering Dataset \\
 	\midrule
-	CNNs                  & SqueezeNet \cite{squeezenet}        & ImageNet \cite{imagenet}  \\
-	\midrule
-	Vision Transformers   & MobileViT-XX-Small \cite{mobilevit} & ImageNet \cite{imagenet}  \\
-	\midrule
-	Language Transformers & DistilBERT \cite{distilbert}        & GLUE \cite{GLUE}          \\
+	CNNs                  & AlexNet \cite{alexnet}  & CIFAR-10 \cite{cifar_10}  \\
 \end{longtable}
 
 \subsection{Evaluation Metrics}
@@ -212,8 +199,153 @@ We will evaluate the heuristics based on the following metrics:
 	\item[Scalability] The ability of the repair method to handle larger models or repair sets without significant degradation in performance or efficiency.
 \end{description}
 
+\section{Results and Discussion}
 
-\newpage
+\subsection{Layer Selection Heuristics}
+
+\subsection{Repair Set Analysis}
+We conducted two complementary suites of experiments to understand the trade-offs inherent in repairing AlexNet on CIFAR-10:
+
+\begin{description}
+	\item[Deterministic ("full-set") repair]in which we solve a single repair problem over an entire edit set of varying size and homogeneity.
+	\item[Stochastic ("incremental") repair]in which we perform repeated, small-batch repair passes—carrying forward the model between passes—so as to trade batch size, number of passes, and homogeneity against overall fidelity.
+\end{description}
+
+We measured how each strategy trades off global test accuracy against local repair accuracy, how repair‐set size and batch size affect performance, and how repeated fixes accumulate.
+
+We conducted comprehensive experiments on AlexNet trained on CIFAR-10 to evaluate different repair strategies and understand the fundamental trade-offs between local correctness and global performance preservation. Our experiments used a pretrained AlexNet model with baseline test accuracy of 72.08\% on CIFAR-10.
+
+\subsubsection{Repair Set Size Impact}
+
+Our experiments demonstrate that larger repair sets consistently lead to worse performance across all metrics. As repair set size increases from 10 to 200 examples, we observe dramatic degradation in success rates, increased accuracy drawdown, and longer repair times.
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.8\textwidth]{results/one_shot_analysis/success_rates/success_rate_by_size.png}
+	\caption{Success rate by repair set size, showing dramatic degradation in repair feasibility as set size increases beyond 25 examples.}
+	\label{fig:success_rate_by_size}
+\end{figure}
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.8\textwidth]{results/one_shot_analysis/accuracy/accuracy_change_by_size.png}
+	\caption{Test set accuracy drawdown by repair set size, demonstrating the severe trade-off between local repair success and global model performance as repair set size increases.}
+	\label{fig:accuracy_drawdown_by_size}
+\end{figure}
+
+The data shows clear trends across all metrics:
+\begin{itemize}
+	\item \textbf{Success Rate:} Drops from 100\% for size 10 to just 9.1\% for size 200
+	\item \textbf{Accuracy Drawdown:} Increases from minimal impact (~-2.7\%) for small sets to severe degradation (-50.8\%) for large sets
+	\item \textbf{Repair Time:} Scales linearly from ~10 seconds to ~50 seconds as set size increases
+\end{itemize}
+
+\subsubsection{Repair Set Homogeneity Effects}
+
+Repair set composition significantly impacts both success rates and performance degradation patterns. Class-homogeneous sets consistently outperform misclassified sets across all metrics.
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.8\textwidth]{results/one_shot_analysis/success_rates/success_rate_heatmap.png}
+	\caption{Success rate heatmap showing the interaction between repair set type and size, clearly illustrating the feasibility boundaries for different repair strategies.}
+	\label{fig:success_rate_heatmap}
+\end{figure}
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.8\textwidth]{results/one_shot_analysis/accuracy/accuracy_change_by_type.png}
+	\caption{Accuracy drawdown distribution by repair set type, demonstrating that class-homogeneous repairs cause significantly less performance degradation than misclassified repairs.}
+	\label{fig:accuracy_change_by_type}
+\end{figure}
+
+\subsubsection{Stochastic Repair Efficiency for Class-Homogeneous Sets}
+
+Our stochastic experiments focused on batch sizes of 5 and 10, as batch size 20 resulted in too many infeasible repairs. For class-homogeneous sets, stochastic repair proves highly efficient, achieving rapid convergence to near-perfect repair set accuracy.
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=\textwidth]{results/stochastic_analysis/batch_iterations/repair_accuracy_batch_5.png}
+	\caption{Repair set accuracy evolution for batch size 5, showing rapid convergence to near-perfect accuracy within 5 iterations for class-homogeneous repairs.}
+	\label{fig:repair_convergence_batch_5}
+\end{figure}
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=\textwidth]{results/stochastic_analysis/batch_iterations/repair_accuracy_batch_10.png}
+	\caption{Repair set accuracy evolution for batch size 10, demonstrating similar rapid convergence patterns to batch size 5.}
+	\label{fig:repair_convergence_batch_10}
+\end{figure}
+
+\subsubsection{Early Stopping to Reduce Drawdown}
+
+The key insight is that stochastic repair converges to near-perfect repair set accuracy within approximately 5 iterations. Stopping early can significantly reduce global accuracy drawdown while maintaining excellent local repair performance.
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=\textwidth]{results/stochastic_analysis/batch_iterations/test_accuracy_batch_5.png}
+	\caption{Test accuracy evolution for batch size 5 showing that early stopping around iteration 5 would preserve much higher global accuracy while maintaining excellent repair set performance.}
+	\label{fig:early_stopping_batch_5}
+\end{figure}
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=\textwidth]{results/stochastic_analysis/batch_iterations/test_accuracy_batch_10.png}
+	\caption{Test accuracy evolution for batch size 10 demonstrating similar early stopping opportunities to reduce drawdown.}
+	\label{fig:early_stopping_batch_10}
+\end{figure}
+
+Key findings from our analysis show that:
+\begin{itemize}
+	\item \textbf{Rapid Convergence:} Class-homogeneous repairs reach 99\% repair set accuracy within 5 iterations
+	\item \textbf{Early Stopping Benefit:} Stopping at iteration 5 preserves 60-65\% test accuracy vs. 45-29\% when running to completion
+	\item \textbf{Batch Size Efficiency:} Both batch sizes 5 and 10 show similar convergence patterns, with batch 5 being slightly more stable
+\end{itemize}
+
+\subsection{Comparative Analysis and Implications}
+
+Our experimental results reveal four key insights for neural network repair:
+
+\begin{enumerate}
+	\item \textbf{Size Limitations:} Repair set size is the primary limiting factor for repair feasibility. Success rates drop dramatically beyond 25 examples, while accuracy drawdown and computational cost scale unfavorably with size.
+
+	\item \textbf{Homogeneity Advantage:} Class-homogeneous repair sets consistently outperform misclassified sets in both success rates and performance preservation, demonstrating the value of semantically coherent repair targets.
+
+	\item \textbf{Stochastic Efficiency:} For class-homogeneous sets with small batch sizes (5-10), stochastic repair provides an efficient path to near-perfect local accuracy with predictable convergence.
+
+	\item \textbf{Early Stopping Potential:} The rapid convergence of stochastic repair (within 5 iterations) presents an opportunity to significantly reduce global accuracy drawdown through early stopping strategies.
+\end{enumerate}
+
+\subsubsection{Practical Implications}
+
+These findings have important implications for practical DNN repair deployment:
+
+\begin{itemize}
+	\item \textbf{Repair Set Curation}: Careful selection and grouping of repair examples by semantic similarity can substantially improve repair outcomes.
+	\item \textbf{Size Limitations}: There exist practical upper bounds on repair set size beyond which the cure becomes worse than the disease.
+	\item \textbf{Strategy Selection}: One-shot repair is generally preferable to iterative approaches for maintaining global model performance.
+	\item \textbf{Monitoring Requirements}: Any repair strategy requires careful post-repair validation to ensure acceptable global performance retention.
+\end{itemize}
+
+\section{Conclusions and Future Work}
+
+Our comprehensive evaluation of neural network repair strategies on AlexNet reveals fundamental trade-offs that must be carefully considered in practical applications. While both one-shot and stochastic repair approaches can achieve perfect local corrections, they impose significant costs on global model performance that scale with repair set size and heterogeneity.
+
+The superior performance of class-homogeneous repair sets suggests that semantic coherence in repair examples is crucial for preserving model generalization. This finding points toward the importance of intelligent repair set curation and the potential value of clustering or grouping repair examples before applying corrections.
+
+Our stochastic repair experiments demonstrate that iterative approaches, while intuitively appealing for their incremental nature, can actually be more destructive than one-shot repairs when applied naively. This counter-intuitive result highlights the complex dynamics of neural network parameter spaces and the difficulty of making localized corrections without global consequences.
+
+Future work should focus on developing repair strategies that explicitly account for these trade-offs, potentially through:
+\begin{itemize}
+	\item Regularization techniques that preserve global decision boundaries while enabling local corrections
+	\item Sophisticated layer selection heuristics that minimize repair impact on unrelated model functionality
+	\item Adaptive repair strategies that adjust their approach based on repair set characteristics
+	\item Multi-objective optimization frameworks that balance local repair success against global performance preservation
+\end{itemize}
+
+Ultimately, our results underscore the fundamental challenge of post-hoc neural network repair: achieving perfect local corrections while preserving global model capability remains an open and significant research problem.
+
+
+
 % Add bibliography at the end
 \bibliographystyle{plainnat}
 \bibliography{references}
