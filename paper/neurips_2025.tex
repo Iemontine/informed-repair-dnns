@@ -221,6 +221,16 @@ Our MLP experiments tested 9 edit heuristics against 10 set heuristics, creating
 
 The tested edit heuristics included both traditional approaches (SingleLayer, FromLayer, ActivationBased, WeightsActivationBased) and novel methods (GradientBased, LayerImportance, NeuronPruning, Adversarial, Random). Set heuristics ranged from simple misclassification-based selection to sophisticated approaches like ConfidenceBased and BoundarySamples.
 
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=\textwidth]{combinations.png}
+	\caption{Performance visualization of all successful heuristic combinations in the MLP experiment, showing the distribution of accuracy improvements and degradations across different edit and set heuristic pairings.}
+	\label{fig:mlp_combinations}
+\end{figure}
+
+The results presented visualized in Figure~\ref{fig:mlp_combinations} demonstrate clear patterns in heuristic effectiveness.
+Notice the fact that the columns for Adversarial and FullDataset set heuristics are entirely empty, indicating that these combinations failed to produce valid repairs.
+
 \subsubsection{Key Findings from MLP Experiments}
 
 Our MLP experiments revealed several critical insights about heuristic effectiveness:
@@ -410,8 +420,15 @@ This work contributes to the broader goal of trustworthy AI by making neural net
 
 Ultimately, our findings demonstrate that while neural network repair remains a challenging problem, informed heuristic selection can significantly improve outcomes. The path forward requires continued research into architecture-specific strategies, better theoretical understanding of parameter modification effects, and the development of more sophisticated tools for predicting and controlling repair outcomes. Through such advances, we can work toward making neural network repair a reliable tool for enhancing AI system trustworthiness and safety.
 
+\section{GitHub}
 
-% Add bibliography at the end
+The code used in this project are available in the following two repos:
+\begin{itemize}
+	\item \textbf{For MLP experiments:} \url{https://github.com/Iemontine/informed-repair-dnns}
+	\item \textbf{For AlexNet experiments:} \url{https://github.com/AkshatAdsule/alexnet_repair}
+\end{itemize}
+
+\newpage
 \bibliographystyle{unsrt}
 \bibliography{references}
 
