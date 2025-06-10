@@ -1,12 +1,12 @@
 \documentclass{article}
 
-% Pass options to natbib to use the references.bib file
+% Pass options to natbib to use numbered citations with compression
 \PassOptionsToPackage{numbers, compress}{natbib}
 
 % ready for submission
 % \usepackage{neurips_2025}
 
-% to compile a preprint version, e.\item \emph{Runtime Scaling}: Repair time scales roughly linearly with set size (10~s $\rightarrow$ 50~s).\item \emph{Runtime Scaling}: Repair time scales roughly linearly with set size (10\,s $\rightarrow$ 50\,s).., for submission to arXiv, add add the
+% to compile a preprint version, e.g., for submission to arXiv, add add the
 % [preprint] option:
     % \usepackage[preprint]{neurips_2025}
 
@@ -116,13 +116,13 @@ By developing heuristics to guide decisions within the repair process, such as s
 This ultimately increases confidence in the robustness and safety of AI systems by ensuring that necessary fixes are applied more predictably and with a better understanding of their potential impact.
 
 \section{Related Work}
-Extensive work has been done on provably repairing deep neural networks given an edit set, with methods such as APRNN [3] and PRDNN [2].
+Extensive work has been done on provably repairing deep neural networks given an edit set, with methods such as APRNN \cite{tao_architecture-preserving_2023} and PRDNN \cite{sotoudeh_provable_2021}.
 These approaches guarantee that, if repair is successful, the modified network will produce the correct output on the specified inputs or input regions.
 However, they do not provide guidance on how users should select internal repair targets, such as which layers, weights, or biases to modify, despite the fact that these decisions can significantly affect the repair’s generalization, stability, and drawdown.
 Additionally, they offer no heuristics for edit set construction, even though the quality of the repair is highly dependent on the examples used to define the repair region (e.g., a V-polytope in APRNN).
 More recent approaches incorporate heuristic guidance into the repair process.
-VeRe [4] uses linear relaxation to estimate how changes to individual neuron activations affect the network's output, assigning a repair significance score to each neuron based on its potential to correct misclassified inputs.
-This score is used to guide iterative neuron-level repairs. INNER [5] takes an interpretability-driven approach: it identifies anomalous neurons whose attribution scores are high for corrupted inputs but normal for clean ones.
+VeRe \citep{ma_vere_2024} uses linear relaxation to estimate how changes to individual neuron activations affect the network's output, assigning a repair significance score to each neuron based on its potential to correct misclassified inputs.
+This score is used to guide iterative neuron-level repairs. INNER \cite{chen_interpretability_2024} takes an interpretability-driven approach: it identifies anomalous neurons whose attribution scores are high for corrupted inputs but normal for clean ones.
 It then repairs these neurons by reducing their influence on incorrect predictions while preserving their behavior on correctly classified inputs.
 
 
@@ -412,7 +412,7 @@ Ultimately, our findings demonstrate that while neural network repair remains a 
 
 
 % Add bibliography at the end
-\bibliographystyle{plainnat}
+\bibliographystyle{unsrt}
 \bibliography{references}
 
 \end{document}
