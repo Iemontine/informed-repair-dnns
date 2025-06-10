@@ -115,6 +115,17 @@ Current repair techniques can involve arbitrary choices, leading to unpredictabl
 By developing heuristics to guide decisions within the repair process, such as selecting the optimal network layer for modification, we enable more systematic, reliable, and effective correction of identified flaws.
 This ultimately increases confidence in the robustness and safety of AI systems by ensuring that necessary fixes are applied more predictably and with a better understanding of their potential impact.
 
+\section{Related Work}
+Extensive work has been done on provably repairing deep neural networks given an edit set, with methods such as APRNN [3] and PRDNN [2].
+These approaches guarantee that, if repair is successful, the modified network will produce the correct output on the specified inputs or input regions.
+However, they do not provide guidance on how users should select internal repair targets, such as which layers, weights, or biases to modify, despite the fact that these decisions can significantly affect the repair’s generalization, stability, and drawdown.
+Additionally, they offer no heuristics for edit set construction, even though the quality of the repair is highly dependent on the examples used to define the repair region (e.g., a V-polytope in APRNN).
+More recent approaches incorporate heuristic guidance into the repair process.
+VeRe [4] uses linear relaxation to estimate how changes to individual neuron activations affect the network's output, assigning a repair significance score to each neuron based on its potential to correct misclassified inputs.
+This score is used to guide iterative neuron-level repairs. INNER [5] takes an interpretability-driven approach: it identifies anomalous neurons whose attribution scores are high for corrupted inputs but normal for clean ones.
+It then repairs these neurons by reducing their influence on incorrect predictions while preserving their behavior on correctly classified inputs.
+
+
 \section{Experimental Setup}
 
 The experiments are designed to answer the primary research question:
